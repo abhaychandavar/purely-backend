@@ -1,0 +1,1 @@
+Purely is at a very early stage right now, I'll add more details regarding building and running the services here soon!
