@@ -1,1 +1,1 @@
-Purely is at a very early stage right now, I'll add more details regarding building and running the services here soon!
+Purely is at a very early stage right now, I'll add more details regarding building and running the services here, but before that I want to optimize the docker file, create a submodule for sharing common code between the services and get the app to a usable state only after that I can open up issues to be solved for open source contributions! Thank you for checking this repository out, stay tuned we will get there soon!
