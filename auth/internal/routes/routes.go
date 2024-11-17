@@ -12,4 +12,5 @@ func InitRoutes(router fiber.Router) {
 		return c.SendString("Hello, World!")
 	})
 	router.Post("/internal", authMiddlewares.VerifyInternalAccess, authController.InsertAuth)
+	router.Get("/token", authMiddlewares.ValidateFirebaseToken, authController.GetAuthToken)
 }

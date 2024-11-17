@@ -160,5 +160,6 @@ func FindOne(ctx context.Context, db *mongo.Database, model interface{}) *mongo.
 	var filter map[string]interface{}
 	inrec, _ := bson.Marshal(model)
 	bson.Unmarshal(inrec, &filter)
+	log.Default().Printf("filter %v", filter)
 	return collection.FindOne(ctx, filter)
 }

@@ -26,3 +26,18 @@ func InsertAuth(c *fiber.Ctx) error {
 		Code:    nil,
 	})
 }
+
+func GetAuthToken(c *fiber.Ctx) error {
+	return httpHelper.Controller(httpHelper.ControllerHelperType{
+		C: c,
+		Handler: func(data interface{}) (interface{}, error) {
+			return authService.GetAuthToken(data.(*string))
+		},
+		DataExtractor: func(c *fiber.Ctx) interface{} {
+			uid := c.Locals("uid").(string)
+			return &uid
+		},
+		Message: nil,
+		Code:    nil,
+	})
+}
