@@ -33,9 +33,16 @@ func GetAuthToken(uid *string) (string, error) {
 	if err != nil {
 		return "", httpErrors.HydrateHttpError("purely/requests/errors/internal_server_error", 500, "Internal Server Error")
 	}
-	token, err := firebaseAuth.CustomToken(context.Background(), *uid)
+	var authRecord models.Auth
+
+	if err := auth.Decode(&authRecord); err != nil {
+		return "", httpErrors.HydrateHttpError("purely/requests/errors/internal_server_error", 500, "Internal Server Error")
+	}
+
+	token, err := firebaseAuth.CustomTokenWithClaims(context.Background(), *uid, map[string]interface{}{"id": authRecord.ID.Hex()})
 	if err != nil {
 		return "", httpErrors.HydrateHttpError("purely/requests/errors/internal_server_error", 500, "Internal Server Error")
 	}
+
 	return token, nil
 }
