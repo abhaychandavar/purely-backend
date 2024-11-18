@@ -13,6 +13,7 @@ type Location struct {
 
 type Profile struct {
 	ID        primitive.ObjectID `bson:"_id,omitempty"`
+	Category  string             `bson:"category" default:"date"`
 	AuthId    string             `bson:"authId" unique:"true"`
 	Location  Location           `bson:"location"`
 	GeoHash   string             `bson:"geohash"`

@@ -19,10 +19,23 @@ func CreateProfile(data profileServiceTypes.CreateProfileType) (string, error) {
 		GeoHash:  geoHash,
 		Status:   "active",
 		AuthId:   *data.AuthId,
+		Category: *data.Category,
 	})
 	if err != nil {
 		log.Fatal(err)
 		return "", httpErrors.HydrateHttpError("purely/profiles/requests/errors/could-not-create-profile", 400, "Phone number already registered")
 	}
 	return profile.InsertedID.(primitive.ObjectID).Hex(), nil
+}
+
+func GetProfile(data profileServiceTypes.GetProfileType) (interface{}, error) {
+	profile := models.FindOne(context.Background(), database.Mongo().Db(), models.Profile{AuthId: *data.AuthId, Category: *data.Category})
+	if profile.Err() != nil {
+		return nil, httpErrors.HydrateHttpError("purely/profiles/requests/errors/profile-not-found", 404, "Profile not found")
+	}
+	var profileData models.Profile
+	if err := profile.Decode(&profileData); err != nil {
+		return nil, httpErrors.HydrateHttpError("purely/profiles/requests/errors/profile-not-found", 404, "Profile not found")
+	}
+	return profileData, nil
 }
