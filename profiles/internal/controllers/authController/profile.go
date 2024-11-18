@@ -5,6 +5,7 @@ import (
 	"auth/internal/types/appTypes"
 	"auth/internal/types/profileControllerTypes"
 	"auth/internal/types/profileServiceTypes"
+	httpErrors "auth/internal/utils/helpers/httpError"
 	httpHelper "auth/internal/utils/helpers/httpHelper"
 
 	"github.com/gofiber/fiber/v2"
@@ -23,7 +24,7 @@ func CreateProfile(c *fiber.Ctx) error {
 			}
 
 			auth := c.Locals("auth").(appTypes.Auth)
-			authId := auth.ID
+			authId := auth.Id
 
 			userProfile := profileServiceTypes.CreateProfileType{
 				AuthId: &authId,
@@ -41,11 +42,15 @@ func GetProfile(c *fiber.Ctx) error {
 	return httpHelper.Controller(httpHelper.ControllerHelperType{
 		C: c,
 		Handler: func(data interface{}) (interface{}, error) {
-			return profileService.GetProfile(data.(profileServiceTypes.GetProfileType))
+			selfData, ok := data.(profileServiceTypes.GetProfileType)
+			if !ok {
+				return nil, httpErrors.HydrateHttpError("purely/profiles/requests/errors/invalid-data", 400, "Invalid data")
+			}
+			return profileService.GetProfile(selfData)
 		},
 		DataExtractor: func(c *fiber.Ctx) interface{} {
 			auth := c.Locals("auth").(appTypes.Auth)
-			authId := auth.ID
+			authId := auth.Id
 
 			category := c.Params("profileCategory")
 

@@ -7,6 +7,6 @@ import (
 )
 
 func InitRoutes(router fiber.Router) {
-	router.Post("/:profileCategory/self", profileController.GetProfile)
+	router.Get("/:profileCategory/self", profileController.GetProfile)
 	router.Post("/", profileController.CreateProfile)
 }

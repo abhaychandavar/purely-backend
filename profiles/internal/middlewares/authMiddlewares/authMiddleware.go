@@ -2,6 +2,7 @@ package authMiddlewares
 
 import (
 	"auth/internal/config"
+	"auth/internal/types/appTypes"
 	firebaseHelper "auth/internal/utils/helpers/firebaseHelpers"
 	httpErrors "auth/internal/utils/helpers/httpError"
 	"auth/internal/utils/helpers/httpHelper"
@@ -29,7 +30,9 @@ func VerifyInternalAccess(c *fiber.Ctx) error {
 func VerifyUserAccess(c *fiber.Ctx) error {
 	authorizationToken := c.Get("Authorization")
 	bearerToken := strings.Split(authorizationToken, "Bearer ")
-
+	if len(bearerToken) < 2 {
+		return httpHelper.SendErrorResponse(c, httpErrors.HydrateHttpError("purely/requests/errors/unauthorized", 401, "Unauthorized"))
+	}
 	firebaseAuth, err := firebaseHelper.App().Auth(context.Background())
 	if err != nil {
 		log.Default().Println(err)
@@ -39,6 +42,9 @@ func VerifyUserAccess(c *fiber.Ctx) error {
 	if err != nil {
 		return httpHelper.SendErrorResponse(c, httpErrors.HydrateHttpError("purely/requests/errors/unauthorized", 401, "Unauthorized"))
 	}
-	c.Locals("user", token.Claims)
+	c.Locals("auth", appTypes.Auth{
+		Id: token.Claims["id"].(string),
+	})
+	log.Default().Printf("auth %v", token.Claims)
 	return c.Next()
 }
