@@ -12,6 +12,7 @@ var (
 	db                  = os.Getenv("MONGO_DB_DATABASE")
 	internalAccessToken = os.Getenv("INTERNAL_ACCESS_TOKEN")
 	firebaseConfigPath  = os.Getenv("FIREBASE_CONFIG_PATH")
+	env                 = os.Getenv("APP_ENV")
 )
 
 type configType struct {
@@ -20,6 +21,7 @@ type configType struct {
 	Db                  string
 	InternalAccessToken string
 	FirebaseConfigPath  string
+	Env                 string
 }
 
 func GetConfig() configType {
@@ -29,6 +31,7 @@ func GetConfig() configType {
 		Port:                "8080",
 		InternalAccessToken: internalAccessToken,
 		FirebaseConfigPath:  firebaseConfigPath,
+		Env:                 env,
 	}
 	if port != "" {
 		obj.Port = port
