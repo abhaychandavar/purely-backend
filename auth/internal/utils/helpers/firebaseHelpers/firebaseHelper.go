@@ -1,14 +1,13 @@
 package firebaseHelper
 
 import (
-	"auth/internal/config"
 	"context"
 	"fmt"
 	"log"
 	"sync"
 
 	firebase "firebase.google.com/go"
-	"google.golang.org/api/option"
+	// "google.golang.org/api/option"
 )
 
 var (
@@ -18,8 +17,8 @@ var (
 
 func App() *firebase.App {
 	once.Do(func() {
-		opt := option.WithCredentialsFile(config.GetConfig().FirebaseConfigPath)
-		firebaseApp, err := firebase.NewApp(context.Background(), nil, opt)
+		// opt := option.WithCredentialsFile(config.GetConfig().FirebaseConfigPath)
+		firebaseApp, err := firebase.NewApp(context.Background(), nil)
 
 		if err != nil {
 			panic(fmt.Errorf("error initializing app: %v", err))
