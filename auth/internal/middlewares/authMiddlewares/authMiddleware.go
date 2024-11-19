@@ -62,7 +62,6 @@ func ValidateFirebaseToken(c *fiber.Ctx) error {
 
 	// Store UID in locals for subsequent use
 	c.Locals("uid", token.UID)
-
 	// Proceed to next middleware or handler
 	return c.Next()
 }
