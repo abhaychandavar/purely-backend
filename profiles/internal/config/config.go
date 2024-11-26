@@ -13,6 +13,7 @@ var (
 	internalAccessToken = os.Getenv("INTERNAL_ACCESS_TOKEN")
 	firebaseConfigPath  = os.Getenv("FIREBASE_CONFIG_PATH")
 	env                 = os.Getenv("APP_ENV")
+	googleMapsAPIKey    = os.Getenv("GOOGLE_MAPS_API_KEY")
 )
 
 type configType struct {
@@ -22,6 +23,7 @@ type configType struct {
 	InternalAccessToken string
 	FirebaseConfigPath  string
 	Env                 string
+	GoogleMapsAPIKey    string
 }
 
 func GetConfig() configType {
@@ -32,6 +34,7 @@ func GetConfig() configType {
 		InternalAccessToken: internalAccessToken,
 		FirebaseConfigPath:  firebaseConfigPath,
 		Env:                 env,
+		GoogleMapsAPIKey:    googleMapsAPIKey,
 	}
 	if port != "" {
 		obj.Port = port

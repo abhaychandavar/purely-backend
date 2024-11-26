@@ -1,11 +1,25 @@
-package profileLayoutConstant
+package profileLayoutTypes
+
+type elementTypeEnum string
+
+// Define the enum values as constants
+const (
+	InputElementType            elementTypeEnum = "input"
+	SelectElementType           elementTypeEnum = "select"
+	PromptElementType           elementTypeEnum = "prompt"
+	ImageElementType            elementTypeEnum = "image"
+	SearchableSelectElementType elementTypeEnum = "searchableSelect"
+	LocationElementType         elementTypeEnum = "location"
+	LocationStepperElementType  elementTypeEnum = "locationStepper"
+)
 
 // leaf element
 type Element struct {
-	Id       string `json:"id"`
-	Type     string `json:"type"`
-	Required bool   `json:"required"`
-	Label    string `json:"label"`
+	Id       string          `json:"id"`
+	Type     elementTypeEnum `json:"type"`
+	Required bool            `json:"required"`
+	Label    string          `json:"label"`
+	IconUrl  string          `json:"iconUrl"`
 }
 
 // Supported elements
@@ -23,13 +37,17 @@ type SelectOption struct {
 
 type SelectElement struct {
 	Element
-	Options     []SelectOption `json:"options"`
-	Placeholder string         `json:"placeholder"`
+	Options      []SelectOption `json:"options"`
+	Placeholder  string         `json:"placeholder"`
+	InitialValue string         `json:"initialValue"`
 }
 
-type PromptSelect struct {
-	Options     []SelectOption `json:"options"`
-	Placeholder string         `json:"placeholder"`
+type SearchableSelectElement struct {
+	Element
+	Options          []SelectOption `json:"options"`
+	Placeholder      string         `json:"placeholder"`
+	DefaultOptionIds []string       `json:"defaultOptionIds"`
+	InitialValue     string         `json:"initialValue"`
 }
 
 type PromptInput struct {
@@ -39,12 +57,28 @@ type PromptInput struct {
 
 type Prompt struct {
 	Element
-	SelectElement       PromptSelect `json:"selectElement"`
-	InputElement        PromptInput  `json:"inputElement"`
-	PromptFetchEndpoint string       `json:"promptFetchEndpoint"`
-	Count               int          `json:"count"`
-	UniquePrompts       bool         `json:"uniquePrompts"`
-	PromptOptions       []string     `json:"staticPrompts"`
+	InputElement        PromptInput `json:"inputElement"`
+	PromptFetchEndpoint string      `json:"promptFetchEndpoint"`
+	Count               int         `json:"count"`
+	UniquePrompts       bool        `json:"uniquePrompts"`
+	PromptOptions       []string    `json:"staticPrompts"`
+}
+
+type Images struct {
+	Element
+	Count         int `json:"count"`
+	RequiredCount int `json:"requiredCount"`
+}
+
+type DistanceStepper struct {
+	Element
+	MinDistance int    `json:"minDistance"`
+	MaxDistance int    `json:"maxDistance"`
+	Unit        string `json:"unit"`
+}
+
+type Location struct {
+	Element
 }
 
 type LayoutElement interface{}

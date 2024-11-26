@@ -42,6 +42,7 @@ func VerifyUserAccess(c *fiber.Ctx) error {
 	if err != nil {
 		return httpHelper.SendErrorResponse(c, httpErrors.HydrateHttpError("purely/requests/errors/unauthorized", 401, "Unauthorized"))
 	}
+	log.Default().Printf("token %v", token)
 	c.Locals("auth", appTypes.Auth{
 		Id: token.Claims["id"].(string),
 	})

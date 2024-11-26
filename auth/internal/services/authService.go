@@ -11,27 +11,27 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func InsertAuth(auth models.Auth) (string, error) {
-	existingAuth := models.FindOne(context.Background(), database.Mongo().Db(), models.Auth{Phone: auth.Phone})
+func InsertAuth(ctx *context.Context, auth models.Auth) (string, error) {
+	existingAuth := models.FindOne(ctx, database.Mongo().Db(), models.Auth{Phone: auth.Phone})
 
 	if existingAuth.Err() == nil {
 		return "", httpErrors.HydrateHttpError("purely/requests/errors/phone-already-registered", 400, "Phone number already registered")
 	}
 
-	data, err := models.Create(context.Background(), database.Mongo().Db(), auth)
+	data, err := models.Create(ctx, database.Mongo().Db(), auth)
 	if err != nil {
 		return "", err
 	}
 	return data.InsertedID.(primitive.ObjectID).Hex(), nil
 }
 
-func GetAuthToken(uid *string) (string, error) {
-	auth := models.FindOne(context.Background(), database.Mongo().Db(), models.Auth{Identifier: *uid})
+func GetAuthToken(ctx *context.Context, uid *string) (string, error) {
+	auth := models.FindOne(ctx, database.Mongo().Db(), models.Auth{Identifier: *uid})
 	if auth.Err() != nil {
 		log.Default().Println(auth.Err().Error())
 		return "", httpErrors.HydrateHttpError("purely/requests/get-auth-token/errors/invalid-user", 400, "Could not find user")
 	}
-	firebaseAuth, err := firebaseHelper.App().Auth(context.Background())
+	firebaseAuth, err := firebaseHelper.App().Auth(*ctx)
 	if err != nil {
 		log.Default().Println(err)
 		return "", httpErrors.HydrateHttpError("purely/requests/get-auth-token/errors/internal_server_error", 500, "Internal Server Error")

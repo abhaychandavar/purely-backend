@@ -2,6 +2,8 @@ package httpHelper
 
 import (
 	httpErrors "auth/internal/utils/helpers/httpError"
+	"context"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
@@ -21,20 +23,27 @@ type errorResponse struct {
 type ControllerHelperType struct {
 	C             *fiber.Ctx
 	DataExtractor func(c *fiber.Ctx) interface{}
-	Handler       func(data interface{}) (interface{}, error)
+	Handler       func(c *context.Context, data interface{}) (interface{}, error)
 	Message       *string
 	Code          *string
+	Ctx           *context.Context
 }
 
 func Controller(params ControllerHelperType) error {
 	// Check if DataExtractor is provided and retrieve data from it
+	if params.Ctx == nil {
+		newCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		params.Ctx = &newCtx
+	}
 	var extractedData interface{}
 	if params.DataExtractor != nil {
 		extractedData = params.DataExtractor(params.C)
 	}
 
 	// Call the Handler with the extracted data
-	data, err := params.Handler(extractedData)
+	data, err := params.Handler(params.Ctx, extractedData)
 	if err != nil {
 		log.Error(err)
 		if httpErr, ok := err.(*httpErrors.HttpError); ok {

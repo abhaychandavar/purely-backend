@@ -4,6 +4,7 @@ import (
 	"auth/internal/database/models"
 	authService "auth/internal/services"
 	httpHelper "auth/internal/utils/helpers/httpHelper"
+	"context"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -11,8 +12,8 @@ import (
 func InsertAuth(c *fiber.Ctx) error {
 	return httpHelper.Controller(httpHelper.ControllerHelperType{
 		C: c,
-		Handler: func(data interface{}) (interface{}, error) {
-			return authService.InsertAuth(data.(models.Auth))
+		Handler: func(ctx *context.Context, data interface{}) (interface{}, error) {
+			return authService.InsertAuth(ctx, data.(models.Auth))
 		},
 		DataExtractor: func(c *fiber.Ctx) interface{} {
 			var auth models.Auth
@@ -30,8 +31,8 @@ func InsertAuth(c *fiber.Ctx) error {
 func GetAuthToken(c *fiber.Ctx) error {
 	return httpHelper.Controller(httpHelper.ControllerHelperType{
 		C: c,
-		Handler: func(data interface{}) (interface{}, error) {
-			return authService.GetAuthToken(data.(*string))
+		Handler: func(ctx *context.Context, data interface{}) (interface{}, error) {
+			return authService.GetAuthToken(ctx, data.(*string))
 		},
 		DataExtractor: func(c *fiber.Ctx) interface{} {
 			uid := c.Locals("uid").(string)
