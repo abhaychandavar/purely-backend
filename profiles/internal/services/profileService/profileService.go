@@ -19,7 +19,7 @@ import (
 func CreateProfile(ctx *context.Context, data profileServiceTypes.CreateProfileType) (string, error) {
 	geoHash := geohash.EncodeWithPrecision(*data.Lat, *data.Lng, 5)
 	profile, err := models.Create(ctx, database.Mongo().Db(), models.Profile{
-		Location: models.Location{Type: "Point", Coordinates: []float64{*data.Lat, *data.Lng}},
+		Location: &models.Location{Type: "Point", Coordinates: []float64{*data.Lat, *data.Lng}},
 		GeoHash:  geoHash,
 		Status:   "active",
 		AuthId:   *data.AuthId,
@@ -215,7 +215,7 @@ func computeProfileCompletionScore(profile *models.Profile) int {
 	if profile.Gender != primitive.NilObjectID {
 		score++
 	}
-	if profile.Location.Type != "" && len(profile.Location.Coordinates) == 2 {
+	if profile.Location != nil {
 		score++
 	}
 	if len(profile.Prompts) > 0 {
@@ -227,19 +227,26 @@ func computeProfileCompletionScore(profile *models.Profile) int {
 	return score
 }
 
-func UpsertDatingProfileType(ctx *context.Context, profile *profileServiceTypes.UpsertDatingProfileType) (string, error) {
+func UpsertDatingProfile(ctx *context.Context, profile *profileServiceTypes.UpsertDatingProfileType) (string, error) {
 	// Validate input
 	if profile.AuthId == nil {
 		return "", httpErrors.HydrateHttpError("purely/profiles/requests/errors/invalid-input", 400, "AuthId cannot be null")
 	}
 
-	filter := bson.M{"authId": *profile.AuthId}
+	filter := models.Profile{
+		AuthId:   *profile.AuthId,
+		Category: "date",
+	}
 	upsertData := models.Profile{
 		AuthId:   *profile.AuthId,
 		Category: "date",
 	}
 	if profile.Name != nil {
 		upsertData.Name = *profile.Name
+	}
+
+	if profile.Bio != nil {
+		upsertData.Bio = *profile.Bio
 	}
 
 	if profile.Age != nil {
@@ -253,6 +260,9 @@ func UpsertDatingProfileType(ctx *context.Context, profile *profileServiceTypes.
 	}
 	if profile.PreferredMatchDistance != nil {
 		upsertData.PreferredMatchDistance = *profile.PreferredMatchDistance
+	}
+	if profile.LocationLabel != nil {
+		upsertData.LocationLabel = *profile.LocationLabel
 	}
 	if profile.Gender != nil {
 		genderId := *profile.Gender
@@ -288,17 +298,13 @@ func UpsertDatingProfileType(ctx *context.Context, profile *profileServiceTypes.
 		upsertData.Images = imageElements
 	}
 	if profile.Location != nil {
-		upsertData.LocationLabel = profile.Location.LocationLabel
-		upsertData.Location = models.Location{
+		upsertData.Location = &models.Location{
 			Type:        "Point",
 			Coordinates: []float64{profile.Location.Lat, profile.Location.Lng},
 		}
 	}
 
-	// Compute the profile completion score
 	upsertData.ProfileCompletionScore = computeProfileCompletionScore(&upsertData)
-
-	// Perform the upsert operation
 	upsertResult, err := models.Upsert(ctx, database.Mongo().Db(), filter, upsertData)
 	if err != nil {
 		if mongo.IsDuplicateKeyError(err) {
@@ -307,19 +313,15 @@ func UpsertDatingProfileType(ctx *context.Context, profile *profileServiceTypes.
 		log.Printf("Error during upsert: %v", err)
 		return "", httpErrors.HydrateHttpError("purely/profiles/requests/errors/could-not-create-profile", 500, "Failed to create or update profile")
 	}
-
-	// Handle inserted or existing ID
 	if upsertResult.UpsertedID != nil {
 		return upsertResult.UpsertedID.(primitive.ObjectID).Hex(), nil
 	}
-
 	existingProfile := models.Profile{}
 	err = models.FindOne(ctx, database.Mongo().Db(), filter).Decode(&existingProfile)
 	if err != nil {
 		log.Printf("Error fetching existing profile: %v", err)
 		return "", httpErrors.HydrateHttpError("purely/profiles/requests/errors/not-found", 404, "Profile not found after upsert")
 	}
-
 	return existingProfile.ID.Hex(), nil
 }
 
@@ -370,4 +372,60 @@ func GetGenders(ctx *context.Context, data profileServiceTypes.GetGendersType) (
 		Limit:   &limit,
 		Records: gendersData,
 	}, nil
+}
+
+func GetProfiles(ctx *context.Context, data profileServiceTypes.GetProfilesType) ([]models.Profile, error) {
+	limit := 20
+	var profileData models.Profile
+
+	// Fetch the self profile to get the location coordinates
+	err := models.FindOne(ctx, database.Mongo().Db(), models.Profile{
+		AuthId:   data.AuthId,
+		Category: data.Category,
+	}).Decode(&profileData)
+	if err != nil {
+		log.Printf("Error fetching self profile: %v", err)
+		return nil, err
+	}
+
+	location := profileData.Location
+	latLng := location.Coordinates
+
+	radius := 10000 // in meters
+	if profileData.PreferredMatchDistance > 0 {
+		radius = profileData.PreferredMatchDistance * 1000
+	}
+
+	// Geospatial query to find profiles within the radius
+	filter := bson.M{
+		"authId": bson.M{
+			"$ne": data.AuthId,
+		},
+		"location": bson.M{
+			"$geoWithin": bson.M{
+				"$centerSphere": []interface{}{
+					latLng,
+					radius / 6378100.0,
+				},
+			},
+		},
+		"category": data.Category,
+	}
+
+	cursor, err := database.Mongo().Db().Collection("profiles").Find(*ctx, filter, options.Find().SetLimit(int64(limit)))
+	if err != nil {
+		log.Printf("Error fetching profiles: %v", err)
+		return nil, err
+	}
+	defer cursor.Close(*ctx)
+
+	var profiles []models.Profile
+	if err := cursor.All(*ctx, &profiles); err != nil {
+		log.Printf("Error decoding profiles: %v", err)
+		return nil, err
+	}
+
+	// Log or return the profiles as needed
+	log.Printf("Found %d profiles within 60 km radius", len(profiles))
+	return profiles, nil
 }

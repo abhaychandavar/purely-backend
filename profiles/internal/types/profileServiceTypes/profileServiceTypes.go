@@ -33,9 +33,8 @@ type DatingPromptType struct {
 }
 
 type Location struct {
-	Lat           float64 `json:"lat"`
-	Lng           float64 `json:"lng"`
-	LocationLabel string  `json:"locationLabel"`
+	Lat float64 `json:"lat"`
+	Lng float64 `json:"lng"`
 }
 
 type UpsertDatingProfileType struct {
@@ -52,11 +51,10 @@ type UpsertDatingProfileType struct {
 
 	Images *[]ImageElementType `json:"images"`
 
-	Lat *float64 `json:"lat"`
-	Lng *float64 `json:"lng"`
+	Location      *Location `json:"location"`
+	LocationLabel *string   `json:"locationLabel"`
 
-	Location               *Location `json:"location"`
-	PreferredMatchDistance *int      `json:"preferredMatchDistance"`
+	PreferredMatchDistance *int `json:"preferredMatchDistance"`
 }
 
 type GetPromptsType struct {
@@ -80,4 +78,10 @@ type GetGendersResponseType struct {
 	Page    *int64          `json:"page"`
 	Limit   *int            `json:"limit"`
 	Total   *int64          `json:"total"`
+}
+
+type GetProfilesType struct {
+	AuthId   string `json:"authId"`
+	Category string `json:"category"`
+	Page     *int64 `json:"page"`
 }

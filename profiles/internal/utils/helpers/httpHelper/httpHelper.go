@@ -30,7 +30,6 @@ type ControllerHelperType struct {
 }
 
 func Controller(params ControllerHelperType) error {
-	// Check if DataExtractor is provided and retrieve data from it
 	if params.Ctx == nil {
 		newCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
@@ -42,12 +41,10 @@ func Controller(params ControllerHelperType) error {
 		extractedData = params.DataExtractor(params.C)
 	}
 
-	// Call the Handler with the extracted data
 	data, err := params.Handler(params.Ctx, extractedData)
 	if err != nil {
 		log.Error(err)
 		if httpErr, ok := err.(*httpErrors.HttpError); ok {
-			// Return a JSON response with the status code and error fields
 			return params.C.Status(httpErr.StatusCode).JSON(errorResponse{
 				Code:    httpErr.Code,
 				Message: httpErr.Message,
@@ -70,7 +67,6 @@ func Controller(params ControllerHelperType) error {
 		code = "purely/requests/" + *params.Code
 	}
 
-	// Return the JSON response
 	return params.C.JSON(successResponse{
 		Data:    data,
 		Message: message,
@@ -80,7 +76,6 @@ func Controller(params ControllerHelperType) error {
 
 func SendErrorResponse(c *fiber.Ctx, err error) error {
 	if httpErr, ok := err.(*httpErrors.HttpError); ok {
-		// Return a JSON response with the status code and error fields
 		return c.Status(httpErr.StatusCode).JSON(errorResponse{
 			Code:    httpErr.Code,
 			Message: httpErr.Message,

@@ -98,7 +98,7 @@ func UpsertDatingProfile(c *fiber.Ctx) error {
 			}
 
 			// Call the service with the parsed profile data
-			response, err := profileService.UpsertDatingProfileType(ctx, &profileData)
+			response, err := profileService.UpsertDatingProfile(ctx, &profileData)
 			if err != nil {
 				return nil, err
 			}
@@ -126,8 +126,8 @@ func UpsertDatingProfile(c *fiber.Ctx) error {
 			if datingProfile.Prompts != nil {
 				for _, prompt := range *datingProfile.Prompts {
 					convertedPrompts = append(convertedPrompts, profileServiceTypes.DatingPromptType{
-						PromptId: prompt.PromptId,
-						Answer:   prompt.Answer,
+						PromptId: *prompt.PromptId,
+						Answer:   *prompt.Answer,
 					})
 				}
 			}
@@ -137,19 +137,18 @@ func UpsertDatingProfile(c *fiber.Ctx) error {
 			if datingProfile.Images != nil {
 				for _, image := range *datingProfile.Images {
 					parsedImages = append(parsedImages, profileServiceTypes.ImageElementType{
-						ImageId: image.ImageId,
-						Order:   image.Order,
+						ImageId: *image.ImageId,
+						Order:   *image.Order,
 					})
 				}
 			}
 
 			// Process location
 			var location *profileServiceTypes.Location
-			if datingProfile.Location != nil {
+			if datingProfile.Location != nil && datingProfile.Location.Lat != nil {
 				location = &profileServiceTypes.Location{
-					Lat:           datingProfile.Location.Lat,
-					Lng:           datingProfile.Location.Lng,
-					LocationLabel: datingProfile.Location.LocationLabel,
+					Lat: *datingProfile.Location.Lat,
+					Lng: *datingProfile.Location.Lng,
 				}
 			}
 			// Build the service type
@@ -164,6 +163,7 @@ func UpsertDatingProfile(c *fiber.Ctx) error {
 				Prompts:                &convertedPrompts,
 				Images:                 &parsedImages,
 				Location:               location,
+				LocationLabel:          datingProfile.LocationLabel,
 				PreferredMatchDistance: datingProfile.PreferredMatchDistance,
 			}
 		},
@@ -225,6 +225,40 @@ func GetGenders(c *fiber.Ctx) error {
 			// Return the expected type directly.
 			return profileServiceTypes.GetGendersType{
 				Page: &page,
+			}
+		},
+		Message: nil,
+		Code:    nil,
+	})
+}
+
+func GetProfiles(c *fiber.Ctx) error {
+	return httpHelper.Controller(httpHelper.ControllerHelperType{
+		C: c,
+		Handler: func(ctx *context.Context, data interface{}) (interface{}, error) {
+			getProfilesData, ok := data.(profileServiceTypes.GetProfilesType)
+			if !ok {
+				return nil, httpErrors.HydrateHttpError("purely/profiles/requests/errors/invalid-data", 400, "Invalid data")
+			}
+			return profileService.GetProfiles(ctx, getProfilesData)
+		},
+		DataExtractor: func(c *fiber.Ctx) interface{} {
+			pageStr := c.Query("page", "0")
+			page, err := strconv.ParseInt(pageStr, 10, 64)
+
+			category := c.Params("profileCategory")
+
+			if err != nil {
+				page = 0
+			}
+
+			auth := c.Locals("auth").(appTypes.Auth)
+			authId := auth.Id
+
+			return profileServiceTypes.GetProfilesType{
+				Page:     &page,
+				Category: category,
+				AuthId:   authId,
 			}
 		},
 		Message: nil,

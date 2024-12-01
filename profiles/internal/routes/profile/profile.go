@@ -13,4 +13,5 @@ func InitRoutes(router fiber.Router) {
 	router.Post("/", profileController.CreateProfile)
 	router.Get("/:profileCategory/layout", profileController.GetProfileLayout)
 	router.Patch("/:profileCategory/upsert", profileController.UpsertDatingProfile)
+	router.Get("/:profileCategory/profiles", profileController.GetProfiles)
 }

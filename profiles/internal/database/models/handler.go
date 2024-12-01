@@ -178,7 +178,7 @@ func FindOne(ctx *context.Context, db *mongo.Database, model interface{}) *mongo
 func Upsert(
 	ctx *context.Context,
 	db *mongo.Database,
-	where bson.M,
+	filter interface{},
 	model interface{},
 ) (*mongo.UpdateResult, error) {
 	collection := db.Collection(models[reflect.TypeOf(model)].CollectionName)
@@ -190,7 +190,18 @@ func Upsert(
 
 	// Check if a document matching `where` exists
 	var existingData bson.M
+	log.Default().Printf("filter %v", filter)
+	var where map[string]interface{}
+	filterMashal, marshalErr := bson.Marshal(filter)
+	if marshalErr != nil {
+		return nil, fmt.Errorf("failed to marshal filter: %v", marshalErr)
+	}
+	bson.Unmarshal(filterMashal, &where)
+
+	log.Default().Printf("where %v", where)
+
 	err := collection.FindOne(*ctx, where).Decode(&existingData)
+
 	if err == mongo.ErrNoDocuments {
 		additionalFields := beforeCreate(model)
 		// Merge `upsertData` and `additionalFields`
@@ -223,10 +234,10 @@ func Upsert(
 	}
 
 	// Document exists, update it
-	filter := bson.M{"_id": existingData["_id"]} // Use the existing document's ID
-	update := bson.M{"$set": data}               // Use `$set` for partial updates
+	existingDocFilter := bson.M{"_id": existingData["_id"]} // Use the existing document's ID
+	update := bson.M{"$set": data}                          // Use `$set` for partial updates
 
-	updateResult, err := collection.UpdateOne(*ctx, filter, update)
+	updateResult, err := collection.UpdateOne(*ctx, existingDocFilter, update)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update document: %v", err)
 	}

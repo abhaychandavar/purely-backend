@@ -37,12 +37,14 @@ type Profile struct {
 
 	Images []ImageElementType `bson:"images,omitempty" json:"images,omitempty"`
 
-	Category      string   `bson:"category,omitempty" default:"date" json:"category,omitempty"`
-	LocationLabel string   `bson:"locationLabel,omitempty" json:"locationLabel,omitempty"`
-	Location      Location `bson:"location,omitempty" json:"location,omitempty"`
-	GeoHash       string   `bson:"geohash,omitempty" json:"geoHash,omitempty"`
+	Category      string    `bson:"category,omitempty" default:"date" json:"category,omitempty"`
+	LocationLabel string    `bson:"locationLabel,omitempty" json:"locationLabel,omitempty"`
+	Location      *Location `bson:"location,omitempty" json:"location,omitempty"`
+	GeoHash       string    `bson:"geohash,omitempty" json:"geoHash,omitempty"`
 
 	Status string `bson:"status,omitempty" default:"active" json:"status,omitempty"`
+
+	Bio string `bson:"bio,omitempty" json:"bio,omitempty"`
 
 	Prompts []PromptElementType `bson:"prompts,omitempty" json:"prompts,omitempty"`
 
