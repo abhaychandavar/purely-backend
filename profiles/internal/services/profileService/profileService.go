@@ -26,7 +26,6 @@ func CreateProfile(ctx *context.Context, data profileServiceTypes.CreateProfileT
 		Category: *data.Category,
 	})
 	if err != nil {
-		log.Fatal(err)
 		return "", httpErrors.HydrateHttpError("purely/profiles/requests/errors/could-not-create-profile", 400, "Phone number already registered")
 	}
 	return profile.InsertedID.(primitive.ObjectID).Hex(), nil
