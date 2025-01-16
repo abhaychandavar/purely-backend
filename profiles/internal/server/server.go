@@ -1,6 +1,8 @@
 package server
 
 import (
+	"fmt"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 
@@ -23,19 +25,21 @@ func New() *FiberServer {
 
 		db: database.Mongo(),
 	}
-
+	fmt.Println("ENV", config.GetConfig().Env)
 	if config.GetConfig().Env != "prod" {
 		server.App.Use(cors.New(cors.Config{
-			AllowOrigins: "http://localhost:3000",             // Only allow requests from this origin
-			AllowMethods: "GET,POST,PUT,DELETE,OPTIONS,PATCH", // Specify allowed HTTP methods
-			AllowHeaders: "Content-Type, Authorization",       // Specify allowed headers
+			AllowOrigins:     "http://localhost:3000",             // Only allow requests from this origin
+			AllowMethods:     "GET,POST,PUT,DELETE,OPTIONS,PATCH", // Specify allowed HTTP methods
+			AllowHeaders:     "Content-Type, Authorization",       // Specify allowed headers
+			AllowCredentials: true,
 		}))
 	}
 	if config.GetConfig().Env == "prod" {
 		server.App.Use(cors.New(cors.Config{
-			AllowOrigins: "https://purelyapp.me",              // Only allow requests from this origin
-			AllowMethods: "GET,POST,PUT,DELETE,OPTIONS,PATCH", // Specify allowed HTTP methods
-			AllowHeaders: "Content-Type, Authorization",       // Specify allowed headers
+			AllowOrigins:     "https://purelyapp.me",              // Only allow requests from this origin
+			AllowMethods:     "GET,POST,PUT,DELETE,OPTIONS,PATCH", // Specify allowed HTTP methods
+			AllowHeaders:     "Content-Type, Authorization",       // Specify allowed headers
+			AllowCredentials: true,
 		}))
 	}
 
