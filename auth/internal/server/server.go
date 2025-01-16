@@ -26,17 +26,21 @@ func New() *FiberServer {
 
 	if config.GetConfig().Env != "prod" {
 		server.App.Use(cors.New(cors.Config{
-			AllowOrigins: "http://localhost:3000",       // Only allow requests from this origin
-			AllowMethods: "GET,POST,PUT,DELETE,OPTIONS", // Specify allowed HTTP methods
-			AllowHeaders: "Content-Type, Authorization", // Specify allowed headers
+			AllowOrigins:     "http://localhost:3000", // Exact frontend origin
+			AllowMethods:     "GET,POST,PUT,DELETE,OPTIONS,PATCH",
+			AllowHeaders:     "Content-Type, Authorization, Accept, Accept-Language, Origin, Referer, User-Agent, Sec-CH-UA, Sec-CH-UA-Mobile, Sec-CH-UA-Platform, Sec-Fetch-Dest, Sec-Fetch-Mode, Sec-Fetch-Site",
+			AllowCredentials: true, // Required if credentials like cookies or Authorization headers are sent
 		}))
+
 	}
 	if config.GetConfig().Env == "prod" {
 		server.App.Use(cors.New(cors.Config{
-			AllowOrigins: "https://purelyapp.me",        // Only allow requests from this origin
-			AllowMethods: "GET,POST,PUT,DELETE,OPTIONS", // Specify allowed HTTP methods
-			AllowHeaders: "Content-Type, Authorization", // Specify allowed headers
+			AllowOrigins:     "https://purelyapp.me", // Exact frontend origin
+			AllowMethods:     "GET,POST,PUT,DELETE,OPTIONS,PATCH",
+			AllowHeaders:     "Content-Type, Authorization, Accept, Accept-Language, Origin, Referer, User-Agent, Sec-CH-UA, Sec-CH-UA-Mobile, Sec-CH-UA-Platform, Sec-Fetch-Dest, Sec-Fetch-Mode, Sec-Fetch-Site",
+			AllowCredentials: true, // Required if credentials like cookies or Authorization headers are sent
 		}))
+
 	}
 
 	return server
