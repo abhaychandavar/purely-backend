@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"fmt"
 	"profiles/internal/config"
 	"sync"
 	"time"
@@ -22,11 +23,14 @@ func (provider *GCPStorageProvider) getClient(ctx *context.Context) (*storage.Cl
 	once.Do(func() {
 		var opts option.ClientOption
 		if config.GetConfig().Env == "development" {
-			opts = option.WithCredentialsFile(config.GetConfig().GoogleServiceJsonFilePath)
+			opts = option.WithCredentialsFile(config.GetConfig().FirebaseConfigPath)
 		}
 		clientInstance, err = storage.NewClient(*ctx, opts)
+		if err != nil {
+			panic(err)
+		}
 	})
-
+	fmt.Println("here 1.4")
 	return clientInstance, err
 }
 
@@ -43,10 +47,13 @@ func (provider *GCPStorageProvider) GenerateSignedUrl(ctx *context.Context, buck
 	expiry := time.Now().Add(10 * time.Minute)
 	signedUrl, err := storageBucket.SignedURL(filePath, &storage.SignedURLOptions{
 		Expires: expiry,
+		Method:  "POST",
 	})
+	fmt.Printf("here 3")
 	if err != nil {
 		return nil, err
 	}
+	fmt.Printf("here 4")
 	return &UploadSignedUrl{
 		Bucket:    bucket,
 		FilePath:  filePath,

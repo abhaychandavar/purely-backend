@@ -24,7 +24,7 @@ type ProfileService struct {
 	StorageProvider storage.StorageProvider
 }
 
-func (this *ProfileService) CreateProfile(ctx *context.Context, data profileServiceTypes.CreateProfileType) (string, error) {
+func (profileService *ProfileService) CreateProfile(ctx *context.Context, data profileServiceTypes.CreateProfileType) (string, error) {
 	geoHash := geohash.EncodeWithPrecision(*data.Lat, *data.Lng, 5)
 	profile, err := models.Create(ctx, database.Mongo().Db(), models.Profile{
 		Location: &models.Location{Type: "Point", Coordinates: []float64{*data.Lat, *data.Lng}},
@@ -39,7 +39,7 @@ func (this *ProfileService) CreateProfile(ctx *context.Context, data profileServ
 	return profile.InsertedID.(primitive.ObjectID).Hex(), nil
 }
 
-func (this *ProfileService) GetProfile(ctx *context.Context, data profileServiceTypes.GetProfileType) (interface{}, error) {
+func (profileService *ProfileService) GetProfile(ctx *context.Context, data profileServiceTypes.GetProfileType) (interface{}, error) {
 	profile := models.FindOne(ctx, database.Mongo().Db(), models.Profile{AuthId: *data.AuthId, Category: *data.Category})
 	if profile.Err() != nil {
 		return nil, httpErrors.HydrateHttpError("purely/profiles/requests/errors/profile-not-found", 404, "Profile not found")
@@ -51,7 +51,7 @@ func (this *ProfileService) GetProfile(ctx *context.Context, data profileService
 	return profileData, nil
 }
 
-func (this *ProfileService) GetProfileLayout(ctx *context.Context, data profileServiceTypes.GetProfileLayoutType) (interface{}, error) {
+func (profileService *ProfileService) GetProfileLayout(ctx *context.Context, data profileServiceTypes.GetProfileLayoutType) (interface{}, error) {
 	return []profileLayoutTypes.LayoutElement{
 		profileLayoutTypes.ElementGroup{
 			Id:    "basicDetails",
@@ -211,7 +211,7 @@ func (this *ProfileService) GetProfileLayout(ctx *context.Context, data profileS
 	}, nil
 }
 
-func (this *ProfileService) computeProfileCompletionScore(profile *models.Profile) int {
+func (profileService *ProfileService) computeProfileCompletionScore(profile *models.Profile) int {
 	score := 0
 	if profile.Name != "" {
 		score++
@@ -234,7 +234,7 @@ func (this *ProfileService) computeProfileCompletionScore(profile *models.Profil
 	return score
 }
 
-func (this *ProfileService) UpsertDatingProfile(ctx *context.Context, profile *profileServiceTypes.UpsertDatingProfileType) (string, error) {
+func (profileService *ProfileService) UpsertDatingProfile(ctx *context.Context, profile *profileServiceTypes.UpsertDatingProfileType) (string, error) {
 	// Validate input
 	if profile.AuthId == nil {
 		return "", httpErrors.HydrateHttpError("purely/profiles/requests/errors/invalid-input", 400, "AuthId cannot be null")
@@ -311,7 +311,7 @@ func (this *ProfileService) UpsertDatingProfile(ctx *context.Context, profile *p
 		}
 	}
 
-	upsertData.ProfileCompletionScore = this.computeProfileCompletionScore(&upsertData)
+	upsertData.ProfileCompletionScore = profileService.computeProfileCompletionScore(&upsertData)
 	upsertResult, err := models.Upsert(ctx, database.Mongo().Db(), filter, upsertData)
 	if err != nil {
 		if mongo.IsDuplicateKeyError(err) {
@@ -332,7 +332,7 @@ func (this *ProfileService) UpsertDatingProfile(ctx *context.Context, profile *p
 	return existingProfile.ID.Hex(), nil
 }
 
-func (this *ProfileService) GetPrompts(ctx *context.Context, data profileServiceTypes.GetPromptsType) (*profileServiceTypes.GetPromptsResponse, error) {
+func (profileService *ProfileService) GetPrompts(ctx *context.Context, data profileServiceTypes.GetPromptsType) (*profileServiceTypes.GetPromptsResponse, error) {
 	limit := 20
 	prompts, err := models.Find(
 		ctx,
@@ -358,7 +358,7 @@ func (this *ProfileService) GetPrompts(ctx *context.Context, data profileService
 	}, nil
 }
 
-func (this *ProfileService) GetGenders(ctx *context.Context, data profileServiceTypes.GetGendersType) (interface{}, error) {
+func (profileService *ProfileService) GetGenders(ctx *context.Context, data profileServiceTypes.GetGendersType) (interface{}, error) {
 	limit := 20
 
 	genders, err := models.Find(
@@ -381,7 +381,7 @@ func (this *ProfileService) GetGenders(ctx *context.Context, data profileService
 	}, nil
 }
 
-func (this *ProfileService) GetProfiles(ctx *context.Context, data profileServiceTypes.GetProfilesType) ([]models.Profile, error) {
+func (profileService *ProfileService) GetProfiles(ctx *context.Context, data profileServiceTypes.GetProfilesType) ([]models.Profile, error) {
 	limit := 20
 	var profileData models.Profile
 
@@ -395,6 +395,9 @@ func (this *ProfileService) GetProfiles(ctx *context.Context, data profileServic
 		return nil, err
 	}
 
+	if profileData.Location == nil {
+		return nil, httpErrors.HydrateHttpError("purely/profiles/requests/errors/no-location-provided", 400, "Location required to find relevant matches")
+	}
 	location := profileData.Location
 	latLng := location.Coordinates
 
@@ -436,9 +439,9 @@ func (this *ProfileService) GetProfiles(ctx *context.Context, data profileServic
 	return profiles, nil
 }
 
-func (this *ProfileService) GenerateMediaUploadSignedUrl(ctx *context.Context, mediaUploadData profileServiceTypes.GenerateMediaUploadSignedUrlType) (*profileServiceTypes.GenerateMediaUploadSignedUrlResType, error) {
+func (profileService *ProfileService) GenerateMediaUploadSignedUrl(ctx *context.Context, mediaUploadData profileServiceTypes.GenerateMediaUploadSignedUrlType) (*profileServiceTypes.GenerateMediaUploadSignedUrlResType, error) {
 	id := uuid.New()
-	signedUrlData, error := this.StorageProvider.GenerateSignedUrl(
+	signedUrlData, error := profileService.StorageProvider.GenerateSignedUrl(
 		ctx,
 		"user-statics",
 		fmt.Sprintf("profiles/%s/media/%s/%s/%s/%s",
