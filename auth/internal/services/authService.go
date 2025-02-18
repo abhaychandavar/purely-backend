@@ -1,4 +1,4 @@
-package authService
+package services
 
 import (
 	"auth/internal/database"
@@ -11,7 +11,9 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func InsertAuth(ctx *context.Context, auth models.Auth) (string, error) {
+type AuthService struct{}
+
+func (authService *AuthService) InsertAuth(ctx *context.Context, auth models.Auth) (string, error) {
 	existingAuth := models.FindOne(ctx, database.Mongo().Db(), models.Auth{Phone: auth.Phone})
 
 	if existingAuth.Err() == nil {
@@ -25,7 +27,7 @@ func InsertAuth(ctx *context.Context, auth models.Auth) (string, error) {
 	return data.InsertedID.(primitive.ObjectID).Hex(), nil
 }
 
-func GetAuthToken(ctx *context.Context, uid *string) (string, error) {
+func (authService *AuthService) GetAuthToken(ctx *context.Context, uid *string) (string, error) {
 	auth := models.FindOne(ctx, database.Mongo().Db(), models.Auth{Identifier: *uid})
 	if auth.Err() != nil {
 		log.Default().Println(auth.Err().Error())

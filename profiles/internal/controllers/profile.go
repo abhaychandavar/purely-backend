@@ -1,24 +1,28 @@
-package profileController
+package controllers
 
 import (
-	"auth/internal/services/profileService"
-	"auth/internal/types/appTypes"
-	"auth/internal/types/profileControllerTypes"
-	"auth/internal/types/profileServiceTypes"
-	httpErrors "auth/internal/utils/helpers/httpError"
-	httpHelper "auth/internal/utils/helpers/httpHelper"
 	"context"
 	"log"
+	"profiles/internal/services"
+	"profiles/internal/types/appTypes"
+	"profiles/internal/types/profileControllerTypes"
+	"profiles/internal/types/profileServiceTypes"
+	httpErrors "profiles/internal/utils/helpers/httpError"
+	httpHelper "profiles/internal/utils/helpers/httpHelper"
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 )
 
-func CreateProfile(c *fiber.Ctx) error {
+type ProfileController struct {
+	ProfileService services.ProfileService
+}
+
+func (this *ProfileController) CreateProfile(c *fiber.Ctx) error {
 	return httpHelper.Controller(httpHelper.ControllerHelperType{
 		C: c,
 		Handler: func(ctx *context.Context, data interface{}) (interface{}, error) {
-			return profileService.CreateProfile(ctx, data.(profileServiceTypes.CreateProfileType))
+			return this.ProfileService.CreateProfile(ctx, data.(profileServiceTypes.CreateProfileType))
 		},
 		DataExtractor: func(c *fiber.Ctx) interface{} {
 			var profile profileControllerTypes.CreateProfileType
@@ -41,7 +45,7 @@ func CreateProfile(c *fiber.Ctx) error {
 	})
 }
 
-func GetProfile(c *fiber.Ctx) error {
+func (this *ProfileController) GetProfile(c *fiber.Ctx) error {
 	return httpHelper.Controller(httpHelper.ControllerHelperType{
 		C: c,
 		Handler: func(ctx *context.Context, data interface{}) (interface{}, error) {
@@ -49,7 +53,7 @@ func GetProfile(c *fiber.Ctx) error {
 			if !ok {
 				return nil, httpErrors.HydrateHttpError("purely/profiles/requests/errors/invalid-data", 400, "Invalid data")
 			}
-			return profileService.GetProfile(ctx, selfData)
+			return this.ProfileService.GetProfile(ctx, selfData)
 		},
 		DataExtractor: func(c *fiber.Ctx) interface{} {
 			auth := c.Locals("auth").(appTypes.Auth)
@@ -67,7 +71,7 @@ func GetProfile(c *fiber.Ctx) error {
 	})
 }
 
-func GetProfileLayout(c *fiber.Ctx) error {
+func (this *ProfileController) GetProfileLayout(c *fiber.Ctx) error {
 	return httpHelper.Controller(httpHelper.ControllerHelperType{
 		C: c,
 		Handler: func(ctx *context.Context, data interface{}) (interface{}, error) {
@@ -75,7 +79,7 @@ func GetProfileLayout(c *fiber.Ctx) error {
 			if !ok {
 				return nil, httpErrors.HydrateHttpError("purely/profiles/requests/errors/invalid-data", 400, "Invalid data")
 			}
-			return profileService.GetProfileLayout(ctx, getProfileLayoutData)
+			return this.ProfileService.GetProfileLayout(ctx, getProfileLayoutData)
 		},
 		DataExtractor: func(c *fiber.Ctx) interface{} {
 			category := c.Params("profileCategory")
@@ -88,7 +92,7 @@ func GetProfileLayout(c *fiber.Ctx) error {
 	})
 }
 
-func UpsertDatingProfile(c *fiber.Ctx) error {
+func (this *ProfileController) UpsertDatingProfile(c *fiber.Ctx) error {
 	return httpHelper.Controller(httpHelper.ControllerHelperType{
 		C: c,
 		Handler: func(ctx *context.Context, data interface{}) (interface{}, error) {
@@ -98,7 +102,7 @@ func UpsertDatingProfile(c *fiber.Ctx) error {
 			}
 
 			// Call the service with the parsed profile data
-			response, err := profileService.UpsertDatingProfile(ctx, &profileData)
+			response, err := this.ProfileService.UpsertDatingProfile(ctx, &profileData)
 			if err != nil {
 				return nil, err
 			}
@@ -172,7 +176,7 @@ func UpsertDatingProfile(c *fiber.Ctx) error {
 	})
 }
 
-func GetPrompts(c *fiber.Ctx) error {
+func (this *ProfileController) GetPrompts(c *fiber.Ctx) error {
 	return httpHelper.Controller(httpHelper.ControllerHelperType{
 		C: c,
 		Handler: func(ctx *context.Context, data interface{}) (interface{}, error) {
@@ -180,7 +184,7 @@ func GetPrompts(c *fiber.Ctx) error {
 			if !ok {
 				return nil, httpErrors.HydrateHttpError("purely/profiles/requests/errors/invalid-data", 400, "Invalid data")
 			}
-			return profileService.GetPrompts(ctx, getPromptsData)
+			return this.ProfileService.GetPrompts(ctx, getPromptsData)
 		},
 		DataExtractor: func(c *fiber.Ctx) interface{} {
 			category := c.Params("profileCategory")
@@ -200,7 +204,7 @@ func GetPrompts(c *fiber.Ctx) error {
 	})
 }
 
-func GetGenders(c *fiber.Ctx) error {
+func (this *ProfileController) GetGenders(c *fiber.Ctx) error {
 	return httpHelper.Controller(httpHelper.ControllerHelperType{
 		C: c,
 		Handler: func(ctx *context.Context, data interface{}) (interface{}, error) {
@@ -211,7 +215,7 @@ func GetGenders(c *fiber.Ctx) error {
 			}
 
 			// Call the service with the prepared data.
-			return profileService.GetGenders(ctx, getGendersData)
+			return this.ProfileService.GetGenders(ctx, getGendersData)
 		},
 		DataExtractor: func(c *fiber.Ctx) interface{} {
 			// Extract "page" query parameter and handle parsing errors.
@@ -232,7 +236,7 @@ func GetGenders(c *fiber.Ctx) error {
 	})
 }
 
-func GetProfiles(c *fiber.Ctx) error {
+func (this *ProfileController) GetProfiles(c *fiber.Ctx) error {
 	return httpHelper.Controller(httpHelper.ControllerHelperType{
 		C: c,
 		Handler: func(ctx *context.Context, data interface{}) (interface{}, error) {
@@ -240,7 +244,7 @@ func GetProfiles(c *fiber.Ctx) error {
 			if !ok {
 				return nil, httpErrors.HydrateHttpError("purely/profiles/requests/errors/invalid-data", 400, "Invalid data")
 			}
-			return profileService.GetProfiles(ctx, getProfilesData)
+			return this.ProfileService.GetProfiles(ctx, getProfilesData)
 		},
 		DataExtractor: func(c *fiber.Ctx) interface{} {
 			pageStr := c.Query("page", "0")
@@ -260,6 +264,68 @@ func GetProfiles(c *fiber.Ctx) error {
 				Category: category,
 				AuthId:   authId,
 			}
+		},
+		Message: nil,
+		Code:    nil,
+	})
+}
+
+func (this *ProfileController) GenerateMediaUploadSignedUrl(c *fiber.Ctx) error {
+	return httpHelper.Controller(httpHelper.ControllerHelperType{
+		C: c,
+		Handler: func(ctx *context.Context, data interface{}) (interface{}, error) {
+			getSignedUrlData, ok := data.(profileServiceTypes.GenerateMediaUploadSignedUrlType)
+			if !ok {
+				return nil, httpErrors.HydrateHttpError("purely/profiles/requests/errors/invalid-data", 400, "Invalid data")
+			}
+			return this.ProfileService.GenerateMediaUploadSignedUrl(ctx, getSignedUrlData)
+		},
+		DataExtractor: func(c *fiber.Ctx) interface{} {
+			var mediaUploadData profileControllerTypes.GenerateMediaUploadSignedUrlType
+			if err := c.BodyParser(&mediaUploadData); err != nil {
+				return nil
+			}
+			auth := c.Locals("auth").(appTypes.Auth)
+			authId := auth.Id
+			mediaUploadParams := profileServiceTypes.GenerateMediaUploadSignedUrlType{
+				FileName: *mediaUploadData.FileName,
+				MimeType: *mediaUploadData.MimeType,
+				AuthId:   authId,
+				FileSize: *mediaUploadData.FileSize,
+				Purpose:  *mediaUploadData.Purpose,
+			}
+			return mediaUploadParams
+		},
+		Message: nil,
+		Code:    nil,
+	})
+}
+
+func (this *ProfileController) CompleteMediaUpload(c *fiber.Ctx) error {
+	return httpHelper.Controller(httpHelper.ControllerHelperType{
+		C: c,
+		Handler: func(ctx *context.Context, data interface{}) (interface{}, error) {
+			getSignedUrlData, ok := data.(profileServiceTypes.GenerateMediaUploadSignedUrlType)
+			if !ok {
+				return nil, httpErrors.HydrateHttpError("purely/profiles/requests/errors/invalid-data", 400, "Invalid data")
+			}
+			return this.ProfileService.GenerateMediaUploadSignedUrl(ctx, getSignedUrlData)
+		},
+		DataExtractor: func(c *fiber.Ctx) interface{} {
+			var mediaUploadData profileControllerTypes.GenerateMediaUploadSignedUrlType
+			if err := c.BodyParser(&mediaUploadData); err != nil {
+				return nil
+			}
+			auth := c.Locals("auth").(appTypes.Auth)
+			authId := auth.Id
+			mediaUploadParams := profileServiceTypes.GenerateMediaUploadSignedUrlType{
+				FileName: *mediaUploadData.FileName,
+				MimeType: *mediaUploadData.MimeType,
+				AuthId:   authId,
+				FileSize: *mediaUploadData.FileSize,
+				Purpose:  *mediaUploadData.Purpose,
+			}
+			return mediaUploadParams
 		},
 		Message: nil,
 		Code:    nil,

@@ -1,8 +1,8 @@
 package httpHelper
 
 import (
-	httpErrors "auth/internal/utils/helpers/httpError"
 	"context"
+	httpErrors "profiles/internal/utils/helpers/httpError"
 	"time"
 
 	"github.com/gofiber/fiber/v2"

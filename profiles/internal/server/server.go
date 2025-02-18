@@ -4,8 +4,8 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 
-	"auth/internal/config"
-	"auth/internal/database"
+	"profiles/internal/config"
+	"profiles/internal/database"
 )
 
 type FiberServer struct {

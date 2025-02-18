@@ -1,13 +1,13 @@
 package authMiddlewares
 
 import (
-	"auth/internal/config"
-	"auth/internal/types/appTypes"
-	firebaseHelper "auth/internal/utils/helpers/firebaseHelpers"
-	httpErrors "auth/internal/utils/helpers/httpError"
-	"auth/internal/utils/helpers/httpHelper"
 	"context"
 	"log"
+	"profiles/internal/config"
+	"profiles/internal/types/appTypes"
+	firebaseHelper "profiles/internal/utils/helpers/firebaseHelpers"
+	httpErrors "profiles/internal/utils/helpers/httpError"
+	"profiles/internal/utils/helpers/httpHelper"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"

@@ -12,9 +12,11 @@ type Location struct {
 }
 
 type ImageElementType struct {
-	ID      primitive.ObjectID `bson:"_id,omitempty" json:"_id,omitempty"`
-	ImageId primitive.ObjectID `bson:"image,omitempty" json:"id,omitempty"`
-	Order   int                `bson:"order,omitempty" json:"order,omitempty"`
+	ID              primitive.ObjectID `bson:"_id,omitempty" json:"_id,omitempty"`
+	ImageId         primitive.ObjectID `bson:"image,omitempty" json:"id,omitempty"`
+	Order           int                `bson:"order,omitempty" json:"order,omitempty"`
+	ImageUrl        string             `bson:"imageUrl,omitempty" json:"imageUrl,omitempty"`
+	BlurredImageUrl string             `bson:"blurredImageUrl,omitempty" json:"blurredImageUrl,omitempty"`
 }
 
 type PromptElementType struct {

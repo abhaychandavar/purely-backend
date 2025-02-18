@@ -1,14 +1,18 @@
-package profileService
+package services
 
 import (
-	"auth/internal/database"
-	"auth/internal/database/models"
-	profileLayoutTypes "auth/internal/types/profileLayout"
-	"auth/internal/types/profileServiceTypes"
-	httpErrors "auth/internal/utils/helpers/httpError"
 	"context"
+	"fmt"
 	"log"
+	"profiles/internal/database"
+	"profiles/internal/database/models"
+	profileLayoutTypes "profiles/internal/types/profileLayout"
+	"profiles/internal/types/profileServiceTypes"
+	httpErrors "profiles/internal/utils/helpers/httpError"
 
+	"profiles/internal/providers/storage"
+
+	"github.com/google/uuid"
 	"github.com/mmcloughlin/geohash"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -16,7 +20,11 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-func CreateProfile(ctx *context.Context, data profileServiceTypes.CreateProfileType) (string, error) {
+type ProfileService struct {
+	StorageProvider storage.StorageProvider
+}
+
+func (this *ProfileService) CreateProfile(ctx *context.Context, data profileServiceTypes.CreateProfileType) (string, error) {
 	geoHash := geohash.EncodeWithPrecision(*data.Lat, *data.Lng, 5)
 	profile, err := models.Create(ctx, database.Mongo().Db(), models.Profile{
 		Location: &models.Location{Type: "Point", Coordinates: []float64{*data.Lat, *data.Lng}},
@@ -31,7 +39,7 @@ func CreateProfile(ctx *context.Context, data profileServiceTypes.CreateProfileT
 	return profile.InsertedID.(primitive.ObjectID).Hex(), nil
 }
 
-func GetProfile(ctx *context.Context, data profileServiceTypes.GetProfileType) (interface{}, error) {
+func (this *ProfileService) GetProfile(ctx *context.Context, data profileServiceTypes.GetProfileType) (interface{}, error) {
 	profile := models.FindOne(ctx, database.Mongo().Db(), models.Profile{AuthId: *data.AuthId, Category: *data.Category})
 	if profile.Err() != nil {
 		return nil, httpErrors.HydrateHttpError("purely/profiles/requests/errors/profile-not-found", 404, "Profile not found")
@@ -43,7 +51,7 @@ func GetProfile(ctx *context.Context, data profileServiceTypes.GetProfileType) (
 	return profileData, nil
 }
 
-func GetProfileLayout(ctx *context.Context, data profileServiceTypes.GetProfileLayoutType) (interface{}, error) {
+func (this *ProfileService) GetProfileLayout(ctx *context.Context, data profileServiceTypes.GetProfileLayoutType) (interface{}, error) {
 	return []profileLayoutTypes.LayoutElement{
 		profileLayoutTypes.ElementGroup{
 			Id:    "basicDetails",
@@ -203,7 +211,7 @@ func GetProfileLayout(ctx *context.Context, data profileServiceTypes.GetProfileL
 	}, nil
 }
 
-func computeProfileCompletionScore(profile *models.Profile) int {
+func (this *ProfileService) computeProfileCompletionScore(profile *models.Profile) int {
 	score := 0
 	if profile.Name != "" {
 		score++
@@ -226,7 +234,7 @@ func computeProfileCompletionScore(profile *models.Profile) int {
 	return score
 }
 
-func UpsertDatingProfile(ctx *context.Context, profile *profileServiceTypes.UpsertDatingProfileType) (string, error) {
+func (this *ProfileService) UpsertDatingProfile(ctx *context.Context, profile *profileServiceTypes.UpsertDatingProfileType) (string, error) {
 	// Validate input
 	if profile.AuthId == nil {
 		return "", httpErrors.HydrateHttpError("purely/profiles/requests/errors/invalid-input", 400, "AuthId cannot be null")
@@ -303,7 +311,7 @@ func UpsertDatingProfile(ctx *context.Context, profile *profileServiceTypes.Upse
 		}
 	}
 
-	upsertData.ProfileCompletionScore = computeProfileCompletionScore(&upsertData)
+	upsertData.ProfileCompletionScore = this.computeProfileCompletionScore(&upsertData)
 	upsertResult, err := models.Upsert(ctx, database.Mongo().Db(), filter, upsertData)
 	if err != nil {
 		if mongo.IsDuplicateKeyError(err) {
@@ -324,7 +332,7 @@ func UpsertDatingProfile(ctx *context.Context, profile *profileServiceTypes.Upse
 	return existingProfile.ID.Hex(), nil
 }
 
-func GetPrompts(ctx *context.Context, data profileServiceTypes.GetPromptsType) (*profileServiceTypes.GetPromptsResponse, error) {
+func (this *ProfileService) GetPrompts(ctx *context.Context, data profileServiceTypes.GetPromptsType) (*profileServiceTypes.GetPromptsResponse, error) {
 	limit := 20
 	prompts, err := models.Find(
 		ctx,
@@ -350,7 +358,7 @@ func GetPrompts(ctx *context.Context, data profileServiceTypes.GetPromptsType) (
 	}, nil
 }
 
-func GetGenders(ctx *context.Context, data profileServiceTypes.GetGendersType) (interface{}, error) {
+func (this *ProfileService) GetGenders(ctx *context.Context, data profileServiceTypes.GetGendersType) (interface{}, error) {
 	limit := 20
 
 	genders, err := models.Find(
@@ -373,7 +381,7 @@ func GetGenders(ctx *context.Context, data profileServiceTypes.GetGendersType) (
 	}, nil
 }
 
-func GetProfiles(ctx *context.Context, data profileServiceTypes.GetProfilesType) ([]models.Profile, error) {
+func (this *ProfileService) GetProfiles(ctx *context.Context, data profileServiceTypes.GetProfilesType) ([]models.Profile, error) {
 	limit := 20
 	var profileData models.Profile
 
@@ -424,7 +432,29 @@ func GetProfiles(ctx *context.Context, data profileServiceTypes.GetProfilesType)
 		return nil, err
 	}
 
-	// Log or return the profiles as needed
 	log.Printf("Found %d profiles within 60 km radius", len(profiles))
 	return profiles, nil
+}
+
+func (this *ProfileService) GenerateMediaUploadSignedUrl(ctx *context.Context, mediaUploadData profileServiceTypes.GenerateMediaUploadSignedUrlType) (*profileServiceTypes.GenerateMediaUploadSignedUrlResType, error) {
+	id := uuid.New()
+	signedUrlData, error := this.StorageProvider.GenerateSignedUrl(
+		ctx,
+		"user-statics",
+		fmt.Sprintf("profiles/%s/media/%s/%s/%s/%s",
+			mediaUploadData.AuthId,
+			mediaUploadData.Purpose,
+			mediaUploadData.MimeType,
+			id.String(),
+			mediaUploadData.FileName),
+		mediaUploadData.MimeType,
+		mediaUploadData.FileSize)
+	if error != nil {
+		log.Printf("Error generating signed URL: %v", error)
+		return nil, httpErrors.HydrateHttpError("purely/profiles/requests/errors/could-not-generate-signed-url", 500, "Failed to generate signed URL")
+	}
+	return &profileServiceTypes.GenerateMediaUploadSignedUrlResType{
+		SignedUrl: signedUrlData.SignedUrl,
+		Expiry:    signedUrlData.Expires.Unix(),
+	}, nil
 }

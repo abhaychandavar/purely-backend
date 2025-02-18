@@ -1,10 +1,10 @@
 package firebaseHelper
 
 import (
-	"auth/internal/config"
 	"context"
 	"fmt"
 	"log"
+	"profiles/internal/config"
 	"sync"
 
 	firebase "firebase.google.com/go"

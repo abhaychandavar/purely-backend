@@ -1,17 +1,34 @@
 package routes
 
 import (
-	"auth/internal/middlewares/authMiddlewares"
-	locationRoutes "auth/internal/routes/location"
-	profileRoutes "auth/internal/routes/profile"
+	"profiles/internal/controllers"
+	"profiles/internal/middlewares/authMiddlewares"
+	"profiles/internal/providers/storage"
+	"profiles/internal/services"
 
 	"github.com/gofiber/fiber/v2"
 )
 
-func InitRoutes(router fiber.Router) {
+type Router struct {
+}
+
+func (r *Router) InitRoutes(router fiber.Router) {
 	router.Get("/", func(c *fiber.Ctx) error {
 		return c.SendString("Hello, World!")
 	})
+
+	locationRoutes := LocationRoutes{
+		locationController: controllers.LocationController{
+			LocationService: services.LocationService{},
+		},
+	}
+	profileRoutes := ProfileRoutes{
+		profileController: controllers.ProfileController{
+			ProfileService: services.ProfileService{
+				StorageProvider: &storage.GCPStorageProvider{},
+			},
+		},
+	}
 
 	// location routes
 	locationRoutesGroup := router.Group("/locations")

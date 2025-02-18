@@ -1,22 +1,26 @@
-package locationController
+package controllers
 
 import (
-	"auth/internal/services/locationService"
-	"auth/internal/types/locationControllerTypes"
-	"auth/internal/types/locationServiceTypes"
-	"auth/internal/utils/helpers/httpHelper"
 	"context"
 	"log"
+	"profiles/internal/services"
+	"profiles/internal/types/locationControllerTypes"
+	"profiles/internal/types/locationServiceTypes"
+	"profiles/internal/utils/helpers/httpHelper"
 
 	"github.com/gofiber/fiber/v2"
 )
 
-func GetLocations(c *fiber.Ctx) error {
+type LocationController struct {
+	LocationService services.LocationService
+}
+
+func (locationController *LocationController) GetLocations(c *fiber.Ctx) error {
 	return httpHelper.Controller(httpHelper.ControllerHelperType{
 		C: c,
 		Handler: func(ctx *context.Context, data interface{}) (interface{}, error) {
 			log.Default().Printf("data %v", data)
-			return locationService.GetLocations(ctx, data.(locationServiceTypes.GetLocationsType))
+			return locationController.LocationService.GetLocations(ctx, data.(locationServiceTypes.GetLocationsType))
 		},
 		DataExtractor: func(c *fiber.Ctx) interface{} {
 			var locationBody locationControllerTypes.GetLocationsType

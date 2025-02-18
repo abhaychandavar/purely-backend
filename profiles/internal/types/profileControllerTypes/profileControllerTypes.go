@@ -36,3 +36,10 @@ type UpsertDatingProfileType struct {
 	Location               *Location           `json:"location"`
 	PreferredMatchDistance *int                `json:"preferredMatchDistance"`
 }
+
+type GenerateMediaUploadSignedUrlType struct {
+	FileName *string `json:"filename"`
+	MimeType *string `json:"mimeType"`
+	FileSize *int64  `json:"fileSize"`
+	Purpose  *string `json:"purpose"`
+}

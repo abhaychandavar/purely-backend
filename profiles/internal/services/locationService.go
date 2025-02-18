@@ -1,8 +1,6 @@
-package locationService
+package services
 
 import (
-	"auth/internal/config"
-	"auth/internal/types/locationServiceTypes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -10,14 +8,19 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"profiles/internal/config"
+	"profiles/internal/types/locationServiceTypes"
 )
+
+type LocationService struct {
+}
 
 type LocationResponse struct {
 	Results       []interface{} `json:"results"`
 	NextPageToken *string       `json:"next_page_token"`
 }
 
-func GetLocations(c *context.Context, data locationServiceTypes.GetLocationsType) (interface{}, error) {
+func (locationService *LocationService) GetLocations(c *context.Context, data locationServiceTypes.GetLocationsType) (interface{}, error) {
 	baseURL := "https://maps.googleapis.com/maps/api/place/textsearch/json"
 	apiKey := config.GetConfig().GoogleMapsAPIKey // Replace with your Google Maps API key
 

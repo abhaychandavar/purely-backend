@@ -1,6 +1,7 @@
 package server
 
 import (
+	"auth/internal/controllers"
 	"auth/internal/routes"
 
 	"github.com/gofiber/fiber/v2"
@@ -8,7 +9,11 @@ import (
 
 func (s *FiberServer) RegisterFiberRoutes() {
 	rootGroup := s.App.Group("/")
-	routes.InitRoutes(rootGroup)
+
+	authRouter := routes.Router{
+		AuthController: controllers.AuthController{},
+	}
+	authRouter.InitRoutes(rootGroup)
 
 	s.App.Get("/health", s.healthHandler)
 

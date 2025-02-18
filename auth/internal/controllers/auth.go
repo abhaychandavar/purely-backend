@@ -1,19 +1,23 @@
-package authController
+package controllers
 
 import (
 	"auth/internal/database/models"
-	authService "auth/internal/services"
+	"auth/internal/services"
 	httpHelper "auth/internal/utils/helpers/httpHelper"
 	"context"
 
 	"github.com/gofiber/fiber/v2"
 )
 
-func InsertAuth(c *fiber.Ctx) error {
+type AuthController struct {
+	AuthService services.AuthService
+}
+
+func (authController *AuthController) InsertAuth(c *fiber.Ctx) error {
 	return httpHelper.Controller(httpHelper.ControllerHelperType{
 		C: c,
 		Handler: func(ctx *context.Context, data interface{}) (interface{}, error) {
-			return authService.InsertAuth(ctx, data.(models.Auth))
+			return authController.AuthService.InsertAuth(ctx, data.(models.Auth))
 		},
 		DataExtractor: func(c *fiber.Ctx) interface{} {
 			var auth models.Auth
@@ -28,11 +32,11 @@ func InsertAuth(c *fiber.Ctx) error {
 	})
 }
 
-func GetAuthToken(c *fiber.Ctx) error {
+func (authController *AuthController) GetAuthToken(c *fiber.Ctx) error {
 	return httpHelper.Controller(httpHelper.ControllerHelperType{
 		C: c,
 		Handler: func(ctx *context.Context, data interface{}) (interface{}, error) {
-			return authService.GetAuthToken(ctx, data.(*string))
+			return authController.AuthService.GetAuthToken(ctx, data.(*string))
 		},
 		DataExtractor: func(c *fiber.Ctx) interface{} {
 			uid := c.Locals("uid").(string)

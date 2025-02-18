@@ -1,11 +1,11 @@
 package database
 
 import (
-	"auth/internal/config"
-	"auth/internal/database/models"
 	"context"
 	"fmt"
 	"log"
+	"profiles/internal/config"
+	"profiles/internal/database/models"
 	"reflect"
 	"sync"
 	"time"

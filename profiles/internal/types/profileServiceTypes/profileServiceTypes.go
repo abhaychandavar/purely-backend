@@ -1,7 +1,7 @@
 package profileServiceTypes
 
 import (
-	"auth/internal/database/models"
+	"profiles/internal/database/models"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -84,4 +84,17 @@ type GetProfilesType struct {
 	AuthId   string `json:"authId"`
 	Category string `json:"category"`
 	Page     *int64 `json:"page"`
+}
+
+type GenerateMediaUploadSignedUrlType struct {
+	FileName string `json:"fileName"`
+	MimeType string `json:"mimeType"`
+	AuthId   string `json:"authId"`
+	FileSize int64  `json:"fileSize"`
+	Purpose  string `json:"purpose"`
+}
+
+type GenerateMediaUploadSignedUrlResType struct {
+	SignedUrl string `json:"signedUrl"`
+	Expiry    int64  `json:"expiry"`
 }

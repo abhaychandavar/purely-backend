@@ -1,13 +1,13 @@
 package main
 
 import (
-	"auth/internal/config"
-	"auth/internal/server"
-	firebaseHelper "auth/internal/utils/helpers/firebaseHelpers"
 	"context"
 	"fmt"
 	"log"
 	"os/signal"
+	"profiles/internal/config"
+	"profiles/internal/server"
+	firebaseHelper "profiles/internal/utils/helpers/firebaseHelpers"
 	"strconv"
 	"syscall"
 	"time"
