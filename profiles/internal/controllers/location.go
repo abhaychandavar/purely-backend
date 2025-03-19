@@ -18,7 +18,7 @@ type LocationController struct {
 func (locationController *LocationController) GetLocations(c *fiber.Ctx) error {
 	return httpHelper.Controller(httpHelper.ControllerHelperType{
 		C: c,
-		Handler: func(ctx *context.Context, data interface{}) (interface{}, error) {
+		Handler: func(ctx context.Context, data interface{}) (interface{}, error) {
 			log.Default().Printf("data %v", data)
 			return locationController.LocationService.GetLocations(ctx, data.(locationServiceTypes.GetLocationsType))
 		},

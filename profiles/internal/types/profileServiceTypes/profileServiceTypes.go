@@ -2,8 +2,7 @@ package profileServiceTypes
 
 import (
 	"profiles/internal/database/models"
-
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"time"
 )
 
 type CreateProfileType struct {
@@ -22,9 +21,9 @@ type GetProfileLayoutType struct {
 	Category *string `json:"category"`
 }
 
-type ImageElementType struct {
-	ImageId primitive.ObjectID `json:"id"`
-	Order   int                `json:"order"`
+type MediaElementType struct {
+	MediaID string `json:"mediaID"`
+	Order   int    `json:"order"`
 }
 
 type DatingPromptType struct {
@@ -49,7 +48,7 @@ type UpsertDatingProfileType struct {
 	Bio     *string             `json:"bio"`
 	Prompts *[]DatingPromptType `json:"prompts"`
 
-	Images *[]ImageElementType `json:"images"`
+	Media *[]MediaElementType `json:"media"`
 
 	Location      *Location `json:"location"`
 	LocationLabel *string   `json:"locationLabel"`
@@ -97,4 +96,77 @@ type GenerateMediaUploadSignedUrlType struct {
 type GenerateMediaUploadSignedUrlResType struct {
 	SignedUrl string `json:"signedUrl"`
 	Expiry    int64  `json:"expiry"`
+}
+
+type GenerateMultipartUploadUrlsType struct {
+	FileName   string `json:"fileName"`
+	MimeType   string `json:"mimeType"`
+	AuthId     string `json:"authId"`
+	FileSize   int64  `json:"fileSize"`
+	Purpose    string `json:"purpose"`
+	PartsCount int    `json:"partsCount"`
+}
+
+type GenerateMultipartUploadUrlsResType struct {
+	SignedUrls map[int]string `json:"signedUrls"`
+	Expiry     int64          `json:"expiry"`
+	UploadID   string         `json:"uploadID"`
+	FilePath   string         `json:"filePath"`
+}
+
+type CompleteMultipartUploadType struct {
+	UploadID string         `json:"uploadID"`
+	FilePath string         `json:"filePath"`
+	Parts    map[int]string `json:"parts"`
+}
+
+type CompleteMultipartUploadResType struct {
+	URL string `json:"url"`
+	ID  string `json:"id"`
+}
+
+type MediaType struct {
+	ID      string `json:"_id,omitempty"`
+	MediaID string `json:"id,omitempty"`
+	Order   int    `json:"order,omitempty"`
+	URL     string `json:"url"`
+	Label   string `json:"label,omitempty"`
+}
+
+type PromptElementType struct {
+	ID     string `json:"_id,omitempty"`
+	Prompt string `json:"id"`
+	Answer string `json:"answer"`
+}
+
+type HydratedProfileType struct {
+	ID     string `json:"id"`
+	AuthId string `json:"authId,omitempty"`
+
+	ProfileCompletionScore int `json:"profileCompletionScore,omitempty"`
+
+	Name       string `json:"name,omitempty"`
+	Age        int    `json:"age,omitempty"`
+	Gender     string `json:"gender,omitempty"`
+	HereFor    string `json:"hereFor,omitempty"`
+	LookingFor string `json:"lookingFor,omitempty"`
+
+	Media []MediaType `json:"media,omitempty"`
+
+	Category      string    `default:"date" json:"category,omitempty"`
+	LocationLabel string    `json:"locationLabel,omitempty"`
+	Location      *Location `json:"location,omitempty"`
+	GeoHash       string    `json:"geoHash,omitempty"`
+
+	Status string `default:"active" json:"status,omitempty"`
+
+	Bio string `json:"bio,omitempty"`
+
+	Prompts []PromptElementType `json:"prompts,omitempty"`
+
+	CreatedAt time.Time `json:"createdAt,omitempty"`
+	UpdatedAt time.Time `json:"updatedAt,omitempty"`
+	DeletedAt time.Time `json:"deletedAt,omitempty"`
+
+	PreferredMatchDistance int `bson:"preferredMatchDistance,omitempty" json:"preferredMatchDistance,omitempty"`
 }

@@ -18,11 +18,11 @@ type ProfileController struct {
 	ProfileService services.ProfileService
 }
 
-func (this *ProfileController) CreateProfile(c *fiber.Ctx) error {
+func (provider *ProfileController) CreateProfile(c *fiber.Ctx) error {
 	return httpHelper.Controller(httpHelper.ControllerHelperType{
 		C: c,
-		Handler: func(ctx *context.Context, data interface{}) (interface{}, error) {
-			return this.ProfileService.CreateProfile(ctx, data.(profileServiceTypes.CreateProfileType))
+		Handler: func(ctx context.Context, data interface{}) (interface{}, error) {
+			return provider.ProfileService.CreateProfile(ctx, data.(profileServiceTypes.CreateProfileType))
 		},
 		DataExtractor: func(c *fiber.Ctx) interface{} {
 			var profile profileControllerTypes.CreateProfileType
@@ -45,22 +45,21 @@ func (this *ProfileController) CreateProfile(c *fiber.Ctx) error {
 	})
 }
 
-func (this *ProfileController) GetProfile(c *fiber.Ctx) error {
+func (provider *ProfileController) GetProfile(c *fiber.Ctx) error {
 	return httpHelper.Controller(httpHelper.ControllerHelperType{
 		C: c,
-		Handler: func(ctx *context.Context, data interface{}) (interface{}, error) {
+		Handler: func(ctx context.Context, data interface{}) (interface{}, error) {
 			selfData, ok := data.(profileServiceTypes.GetProfileType)
 			if !ok {
 				return nil, httpErrors.HydrateHttpError("purely/profiles/requests/errors/invalid-data", 400, "Invalid data")
 			}
-			return this.ProfileService.GetProfile(ctx, selfData)
+			return provider.ProfileService.GetProfile(ctx, selfData)
 		},
 		DataExtractor: func(c *fiber.Ctx) interface{} {
 			auth := c.Locals("auth").(appTypes.Auth)
 			authId := auth.Id
 
 			category := c.Params("profileCategory")
-
 			return profileServiceTypes.GetProfileType{
 				AuthId:   &authId,
 				Category: &category,
@@ -71,15 +70,15 @@ func (this *ProfileController) GetProfile(c *fiber.Ctx) error {
 	})
 }
 
-func (this *ProfileController) GetProfileLayout(c *fiber.Ctx) error {
+func (provider *ProfileController) GetProfileLayout(c *fiber.Ctx) error {
 	return httpHelper.Controller(httpHelper.ControllerHelperType{
 		C: c,
-		Handler: func(ctx *context.Context, data interface{}) (interface{}, error) {
+		Handler: func(ctx context.Context, data interface{}) (interface{}, error) {
 			getProfileLayoutData, ok := data.(profileServiceTypes.GetProfileLayoutType)
 			if !ok {
 				return nil, httpErrors.HydrateHttpError("purely/profiles/requests/errors/invalid-data", 400, "Invalid data")
 			}
-			return this.ProfileService.GetProfileLayout(ctx, getProfileLayoutData)
+			return provider.ProfileService.GetProfileLayout(ctx, getProfileLayoutData)
 		},
 		DataExtractor: func(c *fiber.Ctx) interface{} {
 			category := c.Params("profileCategory")
@@ -92,17 +91,17 @@ func (this *ProfileController) GetProfileLayout(c *fiber.Ctx) error {
 	})
 }
 
-func (this *ProfileController) UpsertDatingProfile(c *fiber.Ctx) error {
+func (provider *ProfileController) UpsertDatingProfile(c *fiber.Ctx) error {
 	return httpHelper.Controller(httpHelper.ControllerHelperType{
 		C: c,
-		Handler: func(ctx *context.Context, data interface{}) (interface{}, error) {
+		Handler: func(ctx context.Context, data interface{}) (interface{}, error) {
 			profileData, ok := data.(profileServiceTypes.UpsertDatingProfileType)
 			if !ok {
 				return nil, httpErrors.HydrateHttpError("purely/profiles/requests/errors/invalid-data", 400, "Invalid data")
 			}
 
 			// Call the service with the parsed profile data
-			response, err := this.ProfileService.UpsertDatingProfile(ctx, &profileData)
+			response, err := provider.ProfileService.UpsertDatingProfile(ctx, &profileData)
 			if err != nil {
 				return nil, err
 			}
@@ -115,7 +114,10 @@ func (this *ProfileController) UpsertDatingProfile(c *fiber.Ctx) error {
 				log.Printf("Error parsing body: %v", err)
 				return nil
 			}
-			log.Printf("Parsed dating profile: %+v", datingProfile)
+
+			if datingProfile.Media != nil {
+				log.Printf("Parsed dating profile: %+v", *datingProfile.Media)
+			}
 
 			// Extract authenticated user's ID
 			auth, ok := c.Locals("auth").(appTypes.Auth)
@@ -129,6 +131,9 @@ func (this *ProfileController) UpsertDatingProfile(c *fiber.Ctx) error {
 			var convertedPrompts []profileServiceTypes.DatingPromptType
 			if datingProfile.Prompts != nil {
 				for _, prompt := range *datingProfile.Prompts {
+					if prompt.PromptId == nil || prompt.Answer == nil {
+						continue
+					}
 					convertedPrompts = append(convertedPrompts, profileServiceTypes.DatingPromptType{
 						PromptId: *prompt.PromptId,
 						Answer:   *prompt.Answer,
@@ -137,16 +142,18 @@ func (this *ProfileController) UpsertDatingProfile(c *fiber.Ctx) error {
 			}
 
 			// Convert images
-			var parsedImages []profileServiceTypes.ImageElementType
-			if datingProfile.Images != nil {
-				for _, image := range *datingProfile.Images {
-					parsedImages = append(parsedImages, profileServiceTypes.ImageElementType{
-						ImageId: *image.ImageId,
-						Order:   *image.Order,
+			var mediaList []profileServiceTypes.MediaElementType
+			if datingProfile.Media != nil {
+				for _, media := range *datingProfile.Media {
+					if media.MediaID == nil || media.Order == nil {
+						continue
+					}
+					mediaList = append(mediaList, profileServiceTypes.MediaElementType{
+						MediaID: *media.MediaID,
+						Order:   *media.Order,
 					})
 				}
 			}
-
 			// Process location
 			var location *profileServiceTypes.Location
 			if datingProfile.Location != nil && datingProfile.Location.Lat != nil {
@@ -165,7 +172,7 @@ func (this *ProfileController) UpsertDatingProfile(c *fiber.Ctx) error {
 				LookingFor:             datingProfile.LookingFor,
 				Bio:                    datingProfile.Bio,
 				Prompts:                &convertedPrompts,
-				Images:                 &parsedImages,
+				Media:                  &mediaList,
 				Location:               location,
 				LocationLabel:          datingProfile.LocationLabel,
 				PreferredMatchDistance: datingProfile.PreferredMatchDistance,
@@ -176,15 +183,15 @@ func (this *ProfileController) UpsertDatingProfile(c *fiber.Ctx) error {
 	})
 }
 
-func (this *ProfileController) GetPrompts(c *fiber.Ctx) error {
+func (provider *ProfileController) GetPrompts(c *fiber.Ctx) error {
 	return httpHelper.Controller(httpHelper.ControllerHelperType{
 		C: c,
-		Handler: func(ctx *context.Context, data interface{}) (interface{}, error) {
+		Handler: func(ctx context.Context, data interface{}) (interface{}, error) {
 			getPromptsData, ok := data.(profileServiceTypes.GetPromptsType)
 			if !ok {
 				return nil, httpErrors.HydrateHttpError("purely/profiles/requests/errors/invalid-data", 400, "Invalid data")
 			}
-			return this.ProfileService.GetPrompts(ctx, getPromptsData)
+			return provider.ProfileService.GetPrompts(ctx, getPromptsData)
 		},
 		DataExtractor: func(c *fiber.Ctx) interface{} {
 			category := c.Params("profileCategory")
@@ -204,10 +211,10 @@ func (this *ProfileController) GetPrompts(c *fiber.Ctx) error {
 	})
 }
 
-func (this *ProfileController) GetGenders(c *fiber.Ctx) error {
+func (provider *ProfileController) GetGenders(c *fiber.Ctx) error {
 	return httpHelper.Controller(httpHelper.ControllerHelperType{
 		C: c,
-		Handler: func(ctx *context.Context, data interface{}) (interface{}, error) {
+		Handler: func(ctx context.Context, data interface{}) (interface{}, error) {
 			// Directly use the extracted data, which is already the expected type.
 			getGendersData, ok := data.(profileServiceTypes.GetGendersType)
 			if !ok {
@@ -215,7 +222,7 @@ func (this *ProfileController) GetGenders(c *fiber.Ctx) error {
 			}
 
 			// Call the service with the prepared data.
-			return this.ProfileService.GetGenders(ctx, getGendersData)
+			return provider.ProfileService.GetGenders(ctx, getGendersData)
 		},
 		DataExtractor: func(c *fiber.Ctx) interface{} {
 			// Extract "page" query parameter and handle parsing errors.
@@ -236,15 +243,15 @@ func (this *ProfileController) GetGenders(c *fiber.Ctx) error {
 	})
 }
 
-func (this *ProfileController) GetProfiles(c *fiber.Ctx) error {
+func (provider *ProfileController) GetProfiles(c *fiber.Ctx) error {
 	return httpHelper.Controller(httpHelper.ControllerHelperType{
 		C: c,
-		Handler: func(ctx *context.Context, data interface{}) (interface{}, error) {
+		Handler: func(ctx context.Context, data interface{}) (interface{}, error) {
 			getProfilesData, ok := data.(profileServiceTypes.GetProfilesType)
 			if !ok {
 				return nil, httpErrors.HydrateHttpError("purely/profiles/requests/errors/invalid-data", 400, "Invalid data")
 			}
-			return this.ProfileService.GetProfiles(ctx, getProfilesData)
+			return provider.ProfileService.GetProfiles(ctx, getProfilesData)
 		},
 		DataExtractor: func(c *fiber.Ctx) interface{} {
 			pageStr := c.Query("page", "0")
@@ -270,15 +277,15 @@ func (this *ProfileController) GetProfiles(c *fiber.Ctx) error {
 	})
 }
 
-func (this *ProfileController) GenerateMediaUploadSignedUrl(c *fiber.Ctx) error {
+func (provider *ProfileController) GenerateMediaUploadSignedUrl(c *fiber.Ctx) error {
 	return httpHelper.Controller(httpHelper.ControllerHelperType{
 		C: c,
-		Handler: func(ctx *context.Context, data interface{}) (interface{}, error) {
+		Handler: func(ctx context.Context, data interface{}) (interface{}, error) {
 			getSignedUrlData, ok := data.(profileServiceTypes.GenerateMediaUploadSignedUrlType)
 			if !ok {
 				return nil, httpErrors.HydrateHttpError("purely/profiles/requests/errors/invalid-data", 400, "Invalid data")
 			}
-			return this.ProfileService.GenerateMediaUploadSignedUrl(ctx, getSignedUrlData)
+			return provider.ProfileService.GenerateMediaUploadSignedUrl(ctx, getSignedUrlData)
 		},
 		DataExtractor: func(c *fiber.Ctx) interface{} {
 			var mediaUploadData profileControllerTypes.GenerateMediaUploadSignedUrlType
@@ -301,29 +308,57 @@ func (this *ProfileController) GenerateMediaUploadSignedUrl(c *fiber.Ctx) error 
 	})
 }
 
-func (this *ProfileController) CompleteMediaUpload(c *fiber.Ctx) error {
+func (profileController *ProfileController) GenerateMultipartUploadUrls(c *fiber.Ctx) error {
 	return httpHelper.Controller(httpHelper.ControllerHelperType{
 		C: c,
-		Handler: func(ctx *context.Context, data interface{}) (interface{}, error) {
-			getSignedUrlData, ok := data.(profileServiceTypes.GenerateMediaUploadSignedUrlType)
+		Handler: func(ctx context.Context, data interface{}) (interface{}, error) {
+			getSignedUrlData, ok := data.(profileServiceTypes.GenerateMultipartUploadUrlsType)
 			if !ok {
 				return nil, httpErrors.HydrateHttpError("purely/profiles/requests/errors/invalid-data", 400, "Invalid data")
 			}
-			return this.ProfileService.GenerateMediaUploadSignedUrl(ctx, getSignedUrlData)
+			return profileController.ProfileService.GenerateMultipartUploadUrls(getSignedUrlData)
 		},
 		DataExtractor: func(c *fiber.Ctx) interface{} {
-			var mediaUploadData profileControllerTypes.GenerateMediaUploadSignedUrlType
+			var mediaUploadData profileControllerTypes.GenerateMultipartMediaUploadSignedUrls
 			if err := c.BodyParser(&mediaUploadData); err != nil {
 				return nil
 			}
 			auth := c.Locals("auth").(appTypes.Auth)
 			authId := auth.Id
-			mediaUploadParams := profileServiceTypes.GenerateMediaUploadSignedUrlType{
-				FileName: *mediaUploadData.FileName,
-				MimeType: *mediaUploadData.MimeType,
-				AuthId:   authId,
-				FileSize: *mediaUploadData.FileSize,
-				Purpose:  *mediaUploadData.Purpose,
+			mediaUploadParams := profileServiceTypes.GenerateMultipartUploadUrlsType{
+				FileName:   mediaUploadData.FileName,
+				MimeType:   mediaUploadData.MimeType,
+				AuthId:     authId,
+				FileSize:   mediaUploadData.FileSize,
+				Purpose:    mediaUploadData.Purpose,
+				PartsCount: mediaUploadData.PartsCount,
+			}
+			return mediaUploadParams
+		},
+		Message: nil,
+		Code:    nil,
+	})
+}
+
+func (profileController *ProfileController) CompleteMultipartUpload(c *fiber.Ctx) error {
+	return httpHelper.Controller(httpHelper.ControllerHelperType{
+		C: c,
+		Handler: func(ctx context.Context, data interface{}) (interface{}, error) {
+			multiPartUploadData, ok := data.(profileServiceTypes.CompleteMultipartUploadType)
+			if !ok {
+				return nil, httpErrors.HydrateHttpError("purely/profiles/requests/errors/invalid-data", 400, "Invalid data")
+			}
+			return profileController.ProfileService.CompleteMultipartUpload(ctx, multiPartUploadData)
+		},
+		DataExtractor: func(c *fiber.Ctx) interface{} {
+			var mediaUploadData profileControllerTypes.CompleteMultipartUpload
+			if err := c.BodyParser(&mediaUploadData); err != nil {
+				return nil
+			}
+			mediaUploadParams := profileServiceTypes.CompleteMultipartUploadType{
+				UploadID: mediaUploadData.UploadID,
+				FilePath: mediaUploadData.FilePath,
+				Parts:    mediaUploadData.Parts,
 			}
 			return mediaUploadParams
 		},

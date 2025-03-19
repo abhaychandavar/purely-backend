@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"profiles/internal/config"
 	"profiles/internal/controllers"
 	"profiles/internal/middlewares/authMiddlewares"
 	"profiles/internal/providers/storage"
@@ -22,20 +23,24 @@ func (r *Router) InitRoutes(router fiber.Router) {
 			LocationService: services.LocationService{},
 		},
 	}
+
+	storageProviderInstance, err := storage.NewAWSStorageProvider(config.GetConfig().AWS.Region, config.GetConfig().AWS.AWSAccessKeyId, config.GetConfig().AWS.AWSSecretAccessKey)
+	if err != nil {
+		panic(err)
+	}
+
 	profileRoutes := ProfileRoutes{
 		profileController: controllers.ProfileController{
 			ProfileService: services.ProfileService{
-				StorageProvider: &storage.GCPStorageProvider{},
+				StorageProvider: storageProviderInstance,
 			},
 		},
 	}
 
-	// location routes
 	locationRoutesGroup := router.Group("/locations")
 	locationRoutesGroup.Use(authMiddlewares.VerifyUserAccess)
 	locationRoutes.InitRoutes(locationRoutesGroup)
 
-	// profile routes
 	profileRoutesGroup := router.Group("/")
 	profileRoutesGroup.Use(authMiddlewares.VerifyUserAccess)
 	profileRoutes.InitRoutes(profileRoutesGroup)

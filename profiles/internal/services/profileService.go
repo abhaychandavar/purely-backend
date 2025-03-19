@@ -9,6 +9,7 @@ import (
 	profileLayoutTypes "profiles/internal/types/profileLayout"
 	"profiles/internal/types/profileServiceTypes"
 	httpErrors "profiles/internal/utils/helpers/httpError"
+	"strings"
 
 	"profiles/internal/providers/storage"
 
@@ -24,7 +25,7 @@ type ProfileService struct {
 	StorageProvider storage.StorageProvider
 }
 
-func (profileService *ProfileService) CreateProfile(ctx *context.Context, data profileServiceTypes.CreateProfileType) (string, error) {
+func (profileService *ProfileService) CreateProfile(ctx context.Context, data profileServiceTypes.CreateProfileType) (string, error) {
 	geoHash := geohash.EncodeWithPrecision(*data.Lat, *data.Lng, 5)
 	profile, err := models.Create(ctx, database.Mongo().Db(), models.Profile{
 		Location: &models.Location{Type: "Point", Coordinates: []float64{*data.Lat, *data.Lng}},
@@ -39,19 +40,66 @@ func (profileService *ProfileService) CreateProfile(ctx *context.Context, data p
 	return profile.InsertedID.(primitive.ObjectID).Hex(), nil
 }
 
-func (profileService *ProfileService) GetProfile(ctx *context.Context, data profileServiceTypes.GetProfileType) (interface{}, error) {
-	profile := models.FindOne(ctx, database.Mongo().Db(), models.Profile{AuthId: *data.AuthId, Category: *data.Category})
-	if profile.Err() != nil {
+func (profileService *ProfileService) GetProfile(ctx context.Context, data profileServiceTypes.GetProfileType) (interface{}, error) {
+	pipeline := mongo.Pipeline{
+		{{Key: "$match", Value: bson.M{"category": *data.Category, "authId": *data.AuthId}}},
+		{
+			{Key: "$lookup", Value: bson.M{
+				"from":         "media",
+				"localField":   "media.mediaID",
+				"foreignField": "_id",
+				"as":           "mediaDetails",
+			}},
+		},
+	}
+
+	profile, err := models.Aggregate(ctx, database.Mongo().Db(), models.Profile{}, pipeline)
+	if err != nil {
 		return nil, httpErrors.HydrateHttpError("purely/profiles/requests/errors/profile-not-found", 404, "Profile not found")
 	}
-	var profileData models.Profile
-	if err := profile.Decode(&profileData); err != nil {
+	var results []bson.M
+	if err := profile.All(ctx, &results); err != nil {
 		return nil, httpErrors.HydrateHttpError("purely/profiles/requests/errors/profile-not-found", 404, "Profile not found")
 	}
-	return profileData, nil
+	if len(results) == 0 {
+		return nil, httpErrors.HydrateHttpError("purely/profiles/requests/errors/profile-not-found", 404, "Profile not found")
+	}
+	profileToReturn := results[0]
+	mediaDetails, ok := profileToReturn["mediaDetails"].(primitive.A)
+	if !ok {
+		fmt.Println("mediaDetails is not of type []primitive.A")
+		return profileToReturn, nil
+	}
+	// currentMedia := profileToReturn["media"].([]primitive.A)
+	mediaArr := []primitive.M{}
+	rawMediaList, ok := profileToReturn["media"].(primitive.A)
+	if !ok {
+		fmt.Println("mediaList is not of type []primitive.A")
+		return profileToReturn, nil
+	}
+	rawMediaListMap := make(map[string]primitive.M)
+	for _, rawMedia := range rawMediaList {
+		if mediaMap, ok := rawMedia.(primitive.M); ok {
+			rawMediaListMap[mediaMap["mediaID"].(primitive.ObjectID).Hex()] = mediaMap
+		}
+	}
+	for _, p := range mediaDetails {
+		if mediaMap, ok := p.(primitive.M); ok {
+			mediaArr = append(mediaArr, primitive.M{
+				"id":       rawMediaListMap[mediaMap["_id"].(primitive.ObjectID).Hex()]["_id"],
+				"ext":      mediaMap["ext"],
+				"order":    rawMediaListMap[mediaMap["_id"].(primitive.ObjectID).Hex()]["order"],
+				"mediaURL": mediaMap["url"],
+				"mediaID":  mediaMap["_id"],
+			})
+		}
+	}
+	profileToReturn["media"] = mediaArr
+	profileToReturn["mediaDetails"] = nil
+	return profileToReturn, nil
 }
 
-func (profileService *ProfileService) GetProfileLayout(ctx *context.Context, data profileServiceTypes.GetProfileLayoutType) (interface{}, error) {
+func (profileService *ProfileService) GetProfileLayout(ctx context.Context, data profileServiceTypes.GetProfileLayoutType) (interface{}, error) {
 	return []profileLayoutTypes.LayoutElement{
 		profileLayoutTypes.ElementGroup{
 			Id:    "basicDetails",
@@ -234,7 +282,7 @@ func (profileService *ProfileService) computeProfileCompletionScore(profile *mod
 	return score
 }
 
-func (profileService *ProfileService) UpsertDatingProfile(ctx *context.Context, profile *profileServiceTypes.UpsertDatingProfileType) (string, error) {
+func (profileService *ProfileService) UpsertDatingProfile(ctx context.Context, profile *profileServiceTypes.UpsertDatingProfileType) (string, error) {
 	// Validate input
 	if profile.AuthId == nil {
 		return "", httpErrors.HydrateHttpError("purely/profiles/requests/errors/invalid-input", 400, "AuthId cannot be null")
@@ -294,15 +342,19 @@ func (profileService *ProfileService) UpsertDatingProfile(ctx *context.Context, 
 		}
 		upsertData.Prompts = prompts
 	}
-	if profile.Images != nil {
-		var imageElements []models.ImageElementType
-		for _, img := range *profile.Images {
-			imageElements = append(imageElements, models.ImageElementType{
-				ImageId: img.ImageId,
-				Order:   img.Order,
+	if profile.Media != nil {
+		var mediaElements []models.MediaType
+		for _, media := range *profile.Media {
+			mediaID, err := primitive.ObjectIDFromHex(media.MediaID)
+			if err != nil {
+				return "", httpErrors.HydrateHttpError("purely/profiles/requests/errors/invalid-image-id", 400, "Invalid image ID")
+			}
+			mediaElements = append(mediaElements, models.MediaType{
+				MediaID: mediaID,
+				Order:   media.Order,
 			})
 		}
-		upsertData.Images = imageElements
+		upsertData.Media = mediaElements
 	}
 	if profile.Location != nil {
 		upsertData.Location = &models.Location{
@@ -312,6 +364,7 @@ func (profileService *ProfileService) UpsertDatingProfile(ctx *context.Context, 
 	}
 
 	upsertData.ProfileCompletionScore = profileService.computeProfileCompletionScore(&upsertData)
+
 	upsertResult, err := models.Upsert(ctx, database.Mongo().Db(), filter, upsertData)
 	if err != nil {
 		if mongo.IsDuplicateKeyError(err) {
@@ -332,7 +385,7 @@ func (profileService *ProfileService) UpsertDatingProfile(ctx *context.Context, 
 	return existingProfile.ID.Hex(), nil
 }
 
-func (profileService *ProfileService) GetPrompts(ctx *context.Context, data profileServiceTypes.GetPromptsType) (*profileServiceTypes.GetPromptsResponse, error) {
+func (profileService *ProfileService) GetPrompts(ctx context.Context, data profileServiceTypes.GetPromptsType) (*profileServiceTypes.GetPromptsResponse, error) {
 	limit := 20
 	prompts, err := models.Find(
 		ctx,
@@ -347,7 +400,7 @@ func (profileService *ProfileService) GetPrompts(ctx *context.Context, data prof
 		return nil, httpErrors.HydrateHttpError("purely/profiles/requests/errors/could-not-get-prompts", 500, "Failed to get prompts")
 	}
 	var promptsData []models.Prompt
-	if err := prompts.All(*ctx, &promptsData); err != nil {
+	if err := prompts.All(ctx, &promptsData); err != nil {
 		log.Printf("Error getting prompts 2: %v", err)
 		return nil, httpErrors.HydrateHttpError("purely/profiles/requests/errors/could-not-get-prompts", 500, "Failed to get prompts")
 	}
@@ -358,7 +411,7 @@ func (profileService *ProfileService) GetPrompts(ctx *context.Context, data prof
 	}, nil
 }
 
-func (profileService *ProfileService) GetGenders(ctx *context.Context, data profileServiceTypes.GetGendersType) (interface{}, error) {
+func (profileService *ProfileService) GetGenders(ctx context.Context, data profileServiceTypes.GetGendersType) (interface{}, error) {
 	limit := 20
 
 	genders, err := models.Find(
@@ -371,7 +424,7 @@ func (profileService *ProfileService) GetGenders(ctx *context.Context, data prof
 		return nil, httpErrors.HydrateHttpError("purely/profiles/requests/errors/could-not-get-genders", 500, "Failed to get genders")
 	}
 	var gendersData []models.Gender
-	if err := genders.All(*ctx, &gendersData); err != nil {
+	if err := genders.All(ctx, &gendersData); err != nil {
 		return nil, httpErrors.HydrateHttpError("purely/profiles/requests/errors/could-not-get-genders", 500, "Failed to get genders")
 	}
 	return &profileServiceTypes.GetGendersResponseType{
@@ -381,7 +434,7 @@ func (profileService *ProfileService) GetGenders(ctx *context.Context, data prof
 	}, nil
 }
 
-func (profileService *ProfileService) GetProfiles(ctx *context.Context, data profileServiceTypes.GetProfilesType) ([]models.Profile, error) {
+func (profileService *ProfileService) GetProfiles(ctx context.Context, data profileServiceTypes.GetProfilesType) ([]models.Profile, error) {
 	limit := 20
 	var profileData models.Profile
 
@@ -422,15 +475,15 @@ func (profileService *ProfileService) GetProfiles(ctx *context.Context, data pro
 		"category": data.Category,
 	}
 
-	cursor, err := database.Mongo().Db().Collection("profiles").Find(*ctx, filter, options.Find().SetLimit(int64(limit)))
+	cursor, err := database.Mongo().Db().Collection("profiles").Find(ctx, filter, options.Find().SetLimit(int64(limit)))
 	if err != nil {
 		log.Printf("Error fetching profiles: %v", err)
 		return nil, err
 	}
-	defer cursor.Close(*ctx)
+	defer cursor.Close(ctx)
 
 	var profiles []models.Profile
-	if err := cursor.All(*ctx, &profiles); err != nil {
+	if err := cursor.All(ctx, &profiles); err != nil {
 		log.Printf("Error decoding profiles: %v", err)
 		return nil, err
 	}
@@ -439,11 +492,10 @@ func (profileService *ProfileService) GetProfiles(ctx *context.Context, data pro
 	return profiles, nil
 }
 
-func (profileService *ProfileService) GenerateMediaUploadSignedUrl(ctx *context.Context, mediaUploadData profileServiceTypes.GenerateMediaUploadSignedUrlType) (*profileServiceTypes.GenerateMediaUploadSignedUrlResType, error) {
+func (profileService *ProfileService) GenerateMediaUploadSignedUrl(ctx context.Context, mediaUploadData profileServiceTypes.GenerateMediaUploadSignedUrlType) (*profileServiceTypes.GenerateMediaUploadSignedUrlResType, error) {
 	id := uuid.New()
 	signedUrlData, error := profileService.StorageProvider.GenerateSignedUrl(
-		ctx,
-		"user-statics",
+		"purely-profiles",
 		fmt.Sprintf("profiles/%s/media/%s/%s/%s/%s",
 			mediaUploadData.AuthId,
 			mediaUploadData.Purpose,
@@ -459,5 +511,57 @@ func (profileService *ProfileService) GenerateMediaUploadSignedUrl(ctx *context.
 	return &profileServiceTypes.GenerateMediaUploadSignedUrlResType{
 		SignedUrl: signedUrlData.SignedUrl,
 		Expiry:    signedUrlData.Expires.Unix(),
+	}, nil
+}
+
+func (profileService *ProfileService) GenerateMultipartUploadUrls(mediaUploadData profileServiceTypes.GenerateMultipartUploadUrlsType) (*profileServiceTypes.GenerateMultipartUploadUrlsResType, error) {
+	id := uuid.New()
+	bucket := "purely-public-assets"
+	filePath := fmt.Sprintf("profiles/%s/media/%s/%s/%s/%s",
+		mediaUploadData.AuthId,
+		mediaUploadData.Purpose,
+		mediaUploadData.MimeType,
+		id.String(),
+		mediaUploadData.FileName)
+	uploadData, err := profileService.StorageProvider.InitiateMultipartUpload(
+		bucket,
+		filePath,
+		mediaUploadData.MimeType,
+		mediaUploadData.FileSize,
+	)
+	if err != nil {
+		return nil, err
+	}
+	res, err := profileService.StorageProvider.GenerateSignedURLsForParts(bucket, filePath, uploadData.UploadId, int(mediaUploadData.PartsCount))
+	if err != nil {
+		return nil, err
+	}
+	return &profileServiceTypes.GenerateMultipartUploadUrlsResType{
+		SignedUrls: res.SignedUrls,
+		Expiry:     res.Expiry.Unix(),
+		UploadID:   uploadData.UploadId,
+		FilePath:   filePath,
+	}, nil
+}
+
+func (profileService *ProfileService) CompleteMultipartUpload(ctx context.Context, mediaUploadData profileServiceTypes.CompleteMultipartUploadType) (*profileServiceTypes.CompleteMultipartUploadResType, error) {
+	res, err := profileService.StorageProvider.CompleteMultipartUpload("purely-public-assets", mediaUploadData.UploadID, mediaUploadData.FilePath, mediaUploadData.Parts)
+	if err != nil {
+		return nil, err
+	}
+	pathSplits := strings.Split(mediaUploadData.FilePath, "/")
+	mimeType := pathSplits[len(pathSplits)-3]
+	media, err := models.Create(ctx, database.Mongo().Db(), models.Media{
+		ID:  primitive.NewObjectID(),
+		Url: *res,
+		EXT: mimeType,
+	})
+	if err != nil {
+		log.Printf("Error creating media entry: %v", err)
+		return nil, err
+	}
+	return &profileServiceTypes.CompleteMultipartUploadResType{
+		URL: *res,
+		ID:  media.InsertedID.(primitive.ObjectID).Hex(),
 	}, nil
 }

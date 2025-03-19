@@ -1,15 +1,13 @@
 package profileControllerTypes
 
-import "go.mongodb.org/mongo-driver/bson/primitive"
-
 type CreateProfileType struct {
 	Lat *float64 `json:"lat"`
 	Lng *float64 `json:"lng"`
 }
 
-type ImageElementType struct {
-	ImageId *primitive.ObjectID `json:"id"`
-	Order   *int                `json:"order"`
+type MediaElementType struct {
+	MediaID *string `json:"mediaID"`
+	Order   *int    `json:"order"`
 }
 
 type DatingPromptType struct {
@@ -29,7 +27,7 @@ type UpsertDatingProfileType struct {
 	LookingFor             *string             `json:"lookingFor"`
 	Bio                    *string             `json:"bio"`
 	Prompts                *[]DatingPromptType `json:"prompts"`
-	Images                 *[]ImageElementType `json:"images"`
+	Media                  *[]MediaElementType `json:"media"`
 	Lat                    *float64            `json:"lat"`
 	Lng                    *float64            `json:"lng"`
 	LocationLabel          *string             `json:"locationLabel"`
@@ -42,4 +40,19 @@ type GenerateMediaUploadSignedUrlType struct {
 	MimeType *string `json:"mimeType"`
 	FileSize *int64  `json:"fileSize"`
 	Purpose  *string `json:"purpose"`
+}
+
+type GenerateMultipartMediaUploadSignedUrls struct {
+	FileName   string `json:"fileName"`
+	MimeType   string `json:"mimeType"`
+	AuthId     string `json:"authId"`
+	FileSize   int64  `json:"fileSize"`
+	Purpose    string `json:"purpose"`
+	PartsCount int    `json:"partsCount"`
+}
+
+type CompleteMultipartUpload struct {
+	UploadID string         `json:"uploadID"`
+	FilePath string         `json:"filePath"`
+	Parts    map[int]string `json:"parts"`
 }

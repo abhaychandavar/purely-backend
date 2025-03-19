@@ -8,3 +8,9 @@ type UploadSignedUrl struct {
 	SignedUrl string
 	Expires   time.Time
 }
+
+type InitiateMultipartUpload struct {
+	Bucket   string
+	FilePath string
+	UploadId string
+}

@@ -15,14 +15,14 @@ var (
 	once           sync.Once
 )
 
-func GetClient(ctx *context.Context) (*storage.Client, error) {
+func GetClient(ctx context.Context) (*storage.Client, error) {
 	var err error
 	once.Do(func() {
 		var opts option.ClientOption
 		if config.GetConfig().Env == "development" {
 			opts = option.WithCredentialsFile(config.GetConfig().GoogleServiceJsonFilePath)
 		}
-		clientInstance, err = storage.NewClient(*ctx, opts)
+		clientInstance, err = storage.NewClient(ctx, opts)
 	})
 
 	return clientInstance, err
@@ -44,7 +44,7 @@ type UploadSignedUrl struct {
 	Expires   time.Time
 }
 
-func GenerateSignedUrl(ctx *context.Context, bucket string, filePath string, MimeType string, fileSize int64) (*UploadSignedUrl, error) {
+func GenerateSignedUrl(ctx context.Context, bucket string, filePath string, MimeType string, fileSize int64) (*UploadSignedUrl, error) {
 	client, err := GetClient(ctx)
 	if err != nil {
 		return nil, err

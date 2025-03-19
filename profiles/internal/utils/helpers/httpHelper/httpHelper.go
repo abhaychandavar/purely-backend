@@ -23,10 +23,10 @@ type errorResponse struct {
 type ControllerHelperType struct {
 	C             *fiber.Ctx
 	DataExtractor func(c *fiber.Ctx) interface{}
-	Handler       func(c *context.Context, data interface{}) (interface{}, error)
+	Handler       func(c context.Context, data interface{}) (interface{}, error)
 	Message       *string
 	Code          *string
-	Ctx           *context.Context
+	Ctx           context.Context
 }
 
 func Controller(params ControllerHelperType) error {
@@ -34,13 +34,12 @@ func Controller(params ControllerHelperType) error {
 		newCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
-		params.Ctx = &newCtx
+		params.Ctx = newCtx
 	}
 	var extractedData interface{}
 	if params.DataExtractor != nil {
 		extractedData = params.DataExtractor(params.C)
 	}
-
 	data, err := params.Handler(params.Ctx, extractedData)
 	if err != nil {
 		log.Error(err)
@@ -55,7 +54,6 @@ func Controller(params ControllerHelperType) error {
 			Message: "An internal server error occurred",
 		})
 	}
-
 	// Prepare the message and code for the response
 	message := "Request handled successfully"
 	if params.Message != nil {
@@ -66,7 +64,6 @@ func Controller(params ControllerHelperType) error {
 	if params.Code != nil {
 		code = "purely/requests/" + *params.Code
 	}
-
 	return params.C.JSON(successResponse{
 		Data:    data,
 		Message: message,

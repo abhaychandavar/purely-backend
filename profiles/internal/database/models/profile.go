@@ -11,12 +11,9 @@ type Location struct {
 	Coordinates []float64 `bson:"coordinates,omitempty" json:"coordinates,omitempty"`
 }
 
-type ImageElementType struct {
-	ID              primitive.ObjectID `bson:"_id,omitempty" json:"_id,omitempty"`
-	ImageId         primitive.ObjectID `bson:"image,omitempty" json:"id,omitempty"`
-	Order           int                `bson:"order,omitempty" json:"order,omitempty"`
-	ImageUrl        string             `bson:"imageUrl,omitempty" json:"imageUrl,omitempty"`
-	BlurredImageUrl string             `bson:"blurredImageUrl,omitempty" json:"blurredImageUrl,omitempty"`
+type MediaType struct {
+	MediaID primitive.ObjectID `bson:"mediaID,omitempty" json:"id,omitempty"`
+	Order   int                `bson:"order,omitempty" json:"order,omitempty"`
 }
 
 type PromptElementType struct {
@@ -37,7 +34,7 @@ type Profile struct {
 	HereFor    string             `bson:"hereFor,omitempty" json:"hereFor,omitempty"`
 	LookingFor string             `bson:"lookingFor,omitempty" json:"lookingFor,omitempty"`
 
-	Images []ImageElementType `bson:"images,omitempty" json:"images,omitempty"`
+	Media []MediaType `bson:"media,omitempty" json:"media,omitempty"`
 
 	Category      string    `bson:"category,omitempty" default:"date" json:"category,omitempty"`
 	LocationLabel string    `bson:"locationLabel,omitempty" json:"locationLabel,omitempty"`

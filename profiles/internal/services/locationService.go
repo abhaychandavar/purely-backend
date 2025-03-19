@@ -20,7 +20,7 @@ type LocationResponse struct {
 	NextPageToken *string       `json:"next_page_token"`
 }
 
-func (locationService *LocationService) GetLocations(c *context.Context, data locationServiceTypes.GetLocationsType) (interface{}, error) {
+func (locationService *LocationService) GetLocations(c context.Context, data locationServiceTypes.GetLocationsType) (interface{}, error) {
 	baseURL := "https://maps.googleapis.com/maps/api/place/textsearch/json"
 	apiKey := config.GetConfig().GoogleMapsAPIKey // Replace with your Google Maps API key
 

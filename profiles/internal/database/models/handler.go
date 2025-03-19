@@ -36,6 +36,11 @@ var (
 			CollectionName: "prompts",
 			Timestamps:     true,
 		},
+		reflect.TypeOf(Media{}): {
+			Model:          Media{},
+			CollectionName: "media",
+			Timestamps:     true,
+		},
 	}
 )
 
@@ -61,7 +66,7 @@ func beforeCreate(model interface{}) map[string]interface{} {
 		"updatedAt": updatedAt,
 	}
 }
-func Create(ctx *context.Context, db *mongo.Database, model interface{}) (*mongo.InsertOneResult, error) {
+func Create(ctx context.Context, db *mongo.Database, model interface{}) (*mongo.InsertOneResult, error) {
 	modelProvider := models[reflect.TypeOf(model)]
 	collectionName := modelProvider.CollectionName
 	additionalFields := beforeCreate(model)
@@ -79,7 +84,7 @@ func Create(ctx *context.Context, db *mongo.Database, model interface{}) (*mongo
 	}
 	log.Default().Printf("collection name %s", collectionName)
 	collection := db.Collection(collectionName)
-	result, err := collection.InsertOne(*ctx, data)
+	result, err := collection.InsertOne(ctx, data)
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +106,7 @@ func beforeUpdate(model interface{}) map[string]interface{} {
 }
 
 // UpdateById updates a document by its ID, setting `updatedAt` if timestamps are enabled.
-func UpdateById(ctx *context.Context, db *mongo.Database, model interface{}, id primitive.ObjectID, updateData map[string]interface{}) (*mongo.UpdateResult, error) {
+func UpdateById(ctx context.Context, db *mongo.Database, model interface{}, id primitive.ObjectID, updateData map[string]interface{}) (*mongo.UpdateResult, error) {
 	modelProvider := models[reflect.TypeOf(model)]
 	collectionName := modelProvider.CollectionName
 	additionalFields := beforeUpdate(model)
@@ -115,7 +120,7 @@ func UpdateById(ctx *context.Context, db *mongo.Database, model interface{}, id 
 	filter := bson.M{"_id": id}
 	update := bson.M{"$set": updateData}
 
-	result, err := collection.UpdateOne(*ctx, filter, update)
+	result, err := collection.UpdateOne(ctx, filter, update)
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +129,7 @@ func UpdateById(ctx *context.Context, db *mongo.Database, model interface{}, id 
 }
 
 // UpdateOne updates the first document that matches the filter, setting `updatedAt` if timestamps are enabled.
-func UpdateOne(ctx *context.Context, db *mongo.Database, model interface{}, filter bson.M, updateData map[string]interface{}) (*mongo.UpdateResult, error) {
+func UpdateOne(ctx context.Context, db *mongo.Database, model interface{}, filter bson.M, updateData map[string]interface{}) (*mongo.UpdateResult, error) {
 	modelProvider := models[reflect.TypeOf(model)]
 	collectionName := modelProvider.CollectionName
 	additionalFields := beforeUpdate(model)
@@ -137,7 +142,7 @@ func UpdateOne(ctx *context.Context, db *mongo.Database, model interface{}, filt
 	collection := db.Collection(collectionName)
 	update := bson.M{"$set": updateData}
 
-	result, err := collection.UpdateOne(*ctx, filter, update)
+	result, err := collection.UpdateOne(ctx, filter, update)
 	if err != nil {
 		return nil, err
 	}
@@ -146,7 +151,7 @@ func UpdateOne(ctx *context.Context, db *mongo.Database, model interface{}, filt
 }
 
 // UpdateMany updates all documents that match the filter, setting `updatedAt` if timestamps are enabled.
-func UpdateMany(ctx *context.Context, db *mongo.Database, model interface{}, filter bson.M, updateData map[string]interface{}) (*mongo.UpdateResult, error) {
+func UpdateMany(ctx context.Context, db *mongo.Database, model interface{}, filter bson.M, updateData map[string]interface{}) (*mongo.UpdateResult, error) {
 	modelProvider := models[reflect.TypeOf(model)]
 	collectionName := modelProvider.CollectionName
 	additionalFields := beforeUpdate(model)
@@ -159,7 +164,7 @@ func UpdateMany(ctx *context.Context, db *mongo.Database, model interface{}, fil
 	collection := db.Collection(collectionName)
 	update := bson.M{"$set": updateData}
 
-	result, err := collection.UpdateMany(*ctx, filter, update)
+	result, err := collection.UpdateMany(ctx, filter, update)
 	if err != nil {
 		return nil, err
 	}
@@ -167,16 +172,16 @@ func UpdateMany(ctx *context.Context, db *mongo.Database, model interface{}, fil
 	return result, nil
 }
 
-func FindOne(ctx *context.Context, db *mongo.Database, model interface{}) *mongo.SingleResult {
+func FindOne(ctx context.Context, db *mongo.Database, model interface{}) *mongo.SingleResult {
 	collection := db.Collection(models[reflect.TypeOf(model)].CollectionName)
 	var filter map[string]interface{}
 	inrec, _ := bson.Marshal(model)
 	bson.Unmarshal(inrec, &filter)
-	return collection.FindOne(*ctx, filter)
+	return collection.FindOne(ctx, filter)
 }
 
 func Upsert(
-	ctx *context.Context,
+	ctx context.Context,
 	db *mongo.Database,
 	filter interface{},
 	model interface{},
@@ -200,7 +205,7 @@ func Upsert(
 
 	log.Default().Printf("where %v", where)
 
-	err := collection.FindOne(*ctx, where).Decode(&existingData)
+	err := collection.FindOne(ctx, where).Decode(&existingData)
 
 	if err == mongo.ErrNoDocuments {
 		additionalFields := beforeCreate(model)
@@ -210,7 +215,7 @@ func Upsert(
 		}
 
 		// Document doesn't exist, insert a new one
-		insertResult, err := collection.InsertOne(*ctx, data)
+		insertResult, err := collection.InsertOne(ctx, data)
 		if err != nil {
 			return nil, fmt.Errorf("failed to insert document: %v", err)
 		}
@@ -237,7 +242,7 @@ func Upsert(
 	existingDocFilter := bson.M{"_id": existingData["_id"]} // Use the existing document's ID
 	update := bson.M{"$set": data}                          // Use `$set` for partial updates
 
-	updateResult, err := collection.UpdateOne(*ctx, existingDocFilter, update)
+	updateResult, err := collection.UpdateOne(ctx, existingDocFilter, update)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update document: %v", err)
 	}
@@ -245,15 +250,15 @@ func Upsert(
 	return updateResult, nil
 }
 
-func Find(ctx *context.Context, db *mongo.Database, model interface{}, opts *options.FindOptions) (*mongo.Cursor, error) {
+func Find(ctx context.Context, db *mongo.Database, model interface{}, opts *options.FindOptions) (*mongo.Cursor, error) {
 	collection := db.Collection(models[reflect.TypeOf(model)].CollectionName)
 	var filter map[string]interface{}
 	inrec, _ := bson.Marshal(model)
 	bson.Unmarshal(inrec, &filter)
-	return collection.Find(*ctx, filter, opts)
+	return collection.Find(ctx, filter, opts)
 }
 
-func CountAllAndFind(ctx *context.Context, db *mongo.Database, model interface{}, opts *options.FindOptions) (*int64, *mongo.Cursor, error) {
+func CountAllAndFind(ctx context.Context, db *mongo.Database, model interface{}, opts *options.FindOptions) (*int64, *mongo.Cursor, error) {
 	// Get collection based on the model type
 	collection := db.Collection(models[reflect.TypeOf(model)].CollectionName)
 
@@ -269,16 +274,29 @@ func CountAllAndFind(ctx *context.Context, db *mongo.Database, model interface{}
 	}
 
 	// Count documents
-	count, err := collection.CountDocuments(*ctx, filter)
+	count, err := collection.CountDocuments(ctx, filter)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	// Find matching documents
-	cursor, err := collection.Find(*ctx, filter, opts)
+	cursor, err := collection.Find(ctx, filter, opts)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	return &count, cursor, nil
+}
+
+func Aggregate(ctx context.Context, db *mongo.Database, model interface{}, pipeline mongo.Pipeline) (*mongo.Cursor, error) {
+	collection := db.Collection(models[reflect.TypeOf(model)].CollectionName)
+	cursor, err := collection.Aggregate(
+		ctx,
+		pipeline,
+	)
+	if err != nil {
+		fmt.Println("Aggregate error", err)
+		return nil, err
+	}
+	return cursor, nil
 }
