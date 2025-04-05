@@ -117,6 +117,5 @@ func (s *service) Client() *mongo.Client {
 }
 
 func (s *service) Db() *mongo.Database {
-	fmt.Println("Db Name: ", s.db.Name())
 	return s.db
 }
