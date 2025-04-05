@@ -12,8 +12,9 @@ type Location struct {
 }
 
 type MediaType struct {
-	MediaID primitive.ObjectID `bson:"mediaID,omitempty" json:"id,omitempty"`
-	Order   int                `bson:"order,omitempty" json:"order,omitempty"`
+	MediaID        primitive.ObjectID `bson:"mediaID,omitempty" json:"id,omitempty"`
+	Order          int                `bson:"order,omitempty" json:"order,omitempty"`
+	BlurredImageID primitive.ObjectID `bson:"blurredImageID,omitempty" json:"blurredImageID,omitempty"`
 }
 
 type PromptElementType struct {
@@ -24,7 +25,9 @@ type PromptElementType struct {
 
 type Profile struct {
 	ID     primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
-	AuthId string             `bson:"authId" json:"authId,omitempty"`
+	AuthId string             `bson:"authId,omitempty" json:"authId,omitempty"`
+
+	IsProfileReady bool `bson:"isProfileReady,omitempty" json:"isProfileReady,omitempty"`
 
 	ProfileCompletionScore int `bson:"profileCompletionScore,omitempty" json:"profileCompletionScore,omitempty"`
 

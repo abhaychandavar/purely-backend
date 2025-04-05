@@ -64,11 +64,11 @@ func (provider *AWSStorageProvider) GenerateSignedUrl(bucket string, filePath st
 	}, nil
 }
 
-func (provider *AWSStorageProvider) InitiateMultipartUpload(bucket string, filePath string, MimeType string, fileSize int64) (*InitiateMultipartUpload, error) {
+func (provider *AWSStorageProvider) InitiateMultipartUpload(bucket string, filePath string, ContentType string, fileSize int64) (*InitiateMultipartUpload, error) {
 	input := &s3.CreateMultipartUploadInput{
 		Bucket:      aws.String(bucket),
 		Key:         aws.String(filePath),
-		ContentType: aws.String(MimeType),
+		ContentType: aws.String(ContentType),
 	}
 	client := provider.clientInstance
 	resp, err := client.CreateMultipartUpload(input)
@@ -111,7 +111,13 @@ func (provider *AWSStorageProvider) GenerateSignedURLsForParts(bucket string, fi
 	}, nil
 }
 
-func (provider *AWSStorageProvider) CompleteMultipartUpload(bucket string, uploadID string, filePath string, parts map[int]string) (*string, error) {
+type CompletedMultipartUploadResponse struct {
+	URL    string
+	Path   string
+	Domain string
+}
+
+func (provider *AWSStorageProvider) CompleteMultipartUpload(bucket string, uploadID string, filePath string, parts map[int]string) (*CompletedMultipartUploadResponse, error) {
 	client := provider.clientInstance
 	partList := []*s3.CompletedPart{}
 	for key, value := range parts {
@@ -132,6 +138,11 @@ func (provider *AWSStorageProvider) CompleteMultipartUpload(bucket string, uploa
 	if err != nil {
 		return nil, err
 	}
-	objUrl := fmt.Sprintf("https://dl1b79m70nfwv.cloudfront.net/%s", filePath)
+	objUrl := CompletedMultipartUploadResponse{
+		URL:    fmt.Sprintf("https://dl1b79m70nfwv.cloudfront.net/%s", filePath),
+		Domain: "https://dl1b79m70nfwv.cloudfront.net",
+		Path:   filePath,
+	}
+
 	return &objUrl, nil
 }

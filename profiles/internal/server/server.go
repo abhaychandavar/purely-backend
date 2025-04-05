@@ -1,11 +1,14 @@
 package server
 
 import (
+	"context"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 
 	"profiles/internal/config"
 	"profiles/internal/database"
+	PubSub "profiles/internal/providers/pubSub"
 )
 
 type FiberServer struct {
@@ -23,7 +26,7 @@ func New() *FiberServer {
 
 		db: database.Mongo(),
 	}
-
+	PubSub.Init(context.Background(), config.GetConfig().Google.ProjectID)
 	if config.GetConfig().Env != "prod" {
 		server.App.Use(cors.New(cors.Config{
 			AllowOrigins:     "http://localhost:3000",

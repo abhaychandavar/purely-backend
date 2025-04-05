@@ -36,19 +36,19 @@ type UpsertDatingProfileType struct {
 }
 
 type GenerateMediaUploadSignedUrlType struct {
-	FileName *string `json:"filename"`
-	MimeType *string `json:"mimeType"`
-	FileSize *int64  `json:"fileSize"`
-	Purpose  *string `json:"purpose"`
+	FileName    *string `json:"filename"`
+	ContentType *string `json:"contentType"`
+	FileSize    *int64  `json:"fileSize"`
+	Purpose     *string `json:"purpose"`
 }
 
 type GenerateMultipartMediaUploadSignedUrls struct {
-	FileName   string `json:"fileName"`
-	MimeType   string `json:"mimeType"`
-	AuthId     string `json:"authId"`
-	FileSize   int64  `json:"fileSize"`
-	Purpose    string `json:"purpose"`
-	PartsCount int    `json:"partsCount"`
+	FileName    string `json:"fileName"`
+	ContentType string `json:"contentType"`
+	AuthId      string `json:"authId"`
+	FileSize    int64  `json:"fileSize"`
+	Purpose     string `json:"purpose"`
+	PartsCount  int    `json:"partsCount"`
 }
 
 type CompleteMultipartUpload struct {

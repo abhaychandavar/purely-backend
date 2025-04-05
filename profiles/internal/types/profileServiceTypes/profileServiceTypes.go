@@ -22,8 +22,9 @@ type GetProfileLayoutType struct {
 }
 
 type MediaElementType struct {
-	MediaID string `json:"mediaID"`
-	Order   int    `json:"order"`
+	MediaID           string `json:"mediaID"`
+	Order             int    `json:"order"`
+	BlurredMediaRefID string `json:"blurredMediaRefID"`
 }
 
 type DatingPromptType struct {
@@ -86,11 +87,11 @@ type GetProfilesType struct {
 }
 
 type GenerateMediaUploadSignedUrlType struct {
-	FileName string `json:"fileName"`
-	MimeType string `json:"mimeType"`
-	AuthId   string `json:"authId"`
-	FileSize int64  `json:"fileSize"`
-	Purpose  string `json:"purpose"`
+	FileName    string `json:"fileName"`
+	ContentType string `json:"contentType"`
+	AuthId      string `json:"authId"`
+	FileSize    int64  `json:"fileSize"`
+	Purpose     string `json:"purpose"`
 }
 
 type GenerateMediaUploadSignedUrlResType struct {
@@ -99,12 +100,12 @@ type GenerateMediaUploadSignedUrlResType struct {
 }
 
 type GenerateMultipartUploadUrlsType struct {
-	FileName   string `json:"fileName"`
-	MimeType   string `json:"mimeType"`
-	AuthId     string `json:"authId"`
-	FileSize   int64  `json:"fileSize"`
-	Purpose    string `json:"purpose"`
-	PartsCount int    `json:"partsCount"`
+	FileName    string `json:"fileName"`
+	ContentType string `json:"contentType"`
+	AuthId      string `json:"authId"`
+	FileSize    int64  `json:"fileSize"`
+	Purpose     string `json:"purpose"`
+	PartsCount  int    `json:"partsCount"`
 }
 
 type GenerateMultipartUploadUrlsResType struct {

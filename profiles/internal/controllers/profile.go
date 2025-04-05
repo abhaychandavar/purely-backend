@@ -12,6 +12,7 @@ import (
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type ProfileController struct {
@@ -148,13 +149,14 @@ func (provider *ProfileController) UpsertDatingProfile(c *fiber.Ctx) error {
 					if media.MediaID == nil || media.Order == nil {
 						continue
 					}
+					blurredMediaRefID := primitive.NewObjectID().Hex()
 					mediaList = append(mediaList, profileServiceTypes.MediaElementType{
-						MediaID: *media.MediaID,
-						Order:   *media.Order,
+						MediaID:           *media.MediaID,
+						Order:             *media.Order,
+						BlurredMediaRefID: blurredMediaRefID,
 					})
 				}
 			}
-			// Process location
 			var location *profileServiceTypes.Location
 			if datingProfile.Location != nil && datingProfile.Location.Lat != nil {
 				location = &profileServiceTypes.Location{
@@ -271,96 +273,6 @@ func (provider *ProfileController) GetProfiles(c *fiber.Ctx) error {
 				Category: category,
 				AuthId:   authId,
 			}
-		},
-		Message: nil,
-		Code:    nil,
-	})
-}
-
-func (provider *ProfileController) GenerateMediaUploadSignedUrl(c *fiber.Ctx) error {
-	return httpHelper.Controller(httpHelper.ControllerHelperType{
-		C: c,
-		Handler: func(ctx context.Context, data interface{}) (interface{}, error) {
-			getSignedUrlData, ok := data.(profileServiceTypes.GenerateMediaUploadSignedUrlType)
-			if !ok {
-				return nil, httpErrors.HydrateHttpError("purely/profiles/requests/errors/invalid-data", 400, "Invalid data")
-			}
-			return provider.ProfileService.GenerateMediaUploadSignedUrl(ctx, getSignedUrlData)
-		},
-		DataExtractor: func(c *fiber.Ctx) interface{} {
-			var mediaUploadData profileControllerTypes.GenerateMediaUploadSignedUrlType
-			if err := c.BodyParser(&mediaUploadData); err != nil {
-				return nil
-			}
-			auth := c.Locals("auth").(appTypes.Auth)
-			authId := auth.Id
-			mediaUploadParams := profileServiceTypes.GenerateMediaUploadSignedUrlType{
-				FileName: *mediaUploadData.FileName,
-				MimeType: *mediaUploadData.MimeType,
-				AuthId:   authId,
-				FileSize: *mediaUploadData.FileSize,
-				Purpose:  *mediaUploadData.Purpose,
-			}
-			return mediaUploadParams
-		},
-		Message: nil,
-		Code:    nil,
-	})
-}
-
-func (profileController *ProfileController) GenerateMultipartUploadUrls(c *fiber.Ctx) error {
-	return httpHelper.Controller(httpHelper.ControllerHelperType{
-		C: c,
-		Handler: func(ctx context.Context, data interface{}) (interface{}, error) {
-			getSignedUrlData, ok := data.(profileServiceTypes.GenerateMultipartUploadUrlsType)
-			if !ok {
-				return nil, httpErrors.HydrateHttpError("purely/profiles/requests/errors/invalid-data", 400, "Invalid data")
-			}
-			return profileController.ProfileService.GenerateMultipartUploadUrls(getSignedUrlData)
-		},
-		DataExtractor: func(c *fiber.Ctx) interface{} {
-			var mediaUploadData profileControllerTypes.GenerateMultipartMediaUploadSignedUrls
-			if err := c.BodyParser(&mediaUploadData); err != nil {
-				return nil
-			}
-			auth := c.Locals("auth").(appTypes.Auth)
-			authId := auth.Id
-			mediaUploadParams := profileServiceTypes.GenerateMultipartUploadUrlsType{
-				FileName:   mediaUploadData.FileName,
-				MimeType:   mediaUploadData.MimeType,
-				AuthId:     authId,
-				FileSize:   mediaUploadData.FileSize,
-				Purpose:    mediaUploadData.Purpose,
-				PartsCount: mediaUploadData.PartsCount,
-			}
-			return mediaUploadParams
-		},
-		Message: nil,
-		Code:    nil,
-	})
-}
-
-func (profileController *ProfileController) CompleteMultipartUpload(c *fiber.Ctx) error {
-	return httpHelper.Controller(httpHelper.ControllerHelperType{
-		C: c,
-		Handler: func(ctx context.Context, data interface{}) (interface{}, error) {
-			multiPartUploadData, ok := data.(profileServiceTypes.CompleteMultipartUploadType)
-			if !ok {
-				return nil, httpErrors.HydrateHttpError("purely/profiles/requests/errors/invalid-data", 400, "Invalid data")
-			}
-			return profileController.ProfileService.CompleteMultipartUpload(ctx, multiPartUploadData)
-		},
-		DataExtractor: func(c *fiber.Ctx) interface{} {
-			var mediaUploadData profileControllerTypes.CompleteMultipartUpload
-			if err := c.BodyParser(&mediaUploadData); err != nil {
-				return nil
-			}
-			mediaUploadParams := profileServiceTypes.CompleteMultipartUploadType{
-				UploadID: mediaUploadData.UploadID,
-				FilePath: mediaUploadData.FilePath,
-				Parts:    mediaUploadData.Parts,
-			}
-			return mediaUploadParams
 		},
 		Message: nil,
 		Code:    nil,

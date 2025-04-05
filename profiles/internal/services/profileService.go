@@ -6,14 +6,11 @@ import (
 	"log"
 	"profiles/internal/database"
 	"profiles/internal/database/models"
+	PubSub "profiles/internal/providers/pubSub"
 	profileLayoutTypes "profiles/internal/types/profileLayout"
 	"profiles/internal/types/profileServiceTypes"
 	httpErrors "profiles/internal/utils/helpers/httpError"
-	"strings"
 
-	"profiles/internal/providers/storage"
-
-	"github.com/google/uuid"
 	"github.com/mmcloughlin/geohash"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -22,7 +19,6 @@ import (
 )
 
 type ProfileService struct {
-	StorageProvider storage.StorageProvider
 }
 
 func (profileService *ProfileService) CreateProfile(ctx context.Context, data profileServiceTypes.CreateProfileType) (string, error) {
@@ -292,6 +288,14 @@ func (profileService *ProfileService) UpsertDatingProfile(ctx context.Context, p
 		AuthId:   *profile.AuthId,
 		Category: "date",
 	}
+
+	existingProfile := models.Profile{}
+	err := models.FindOne(ctx, database.Mongo().Db(), filter).Decode(&existingProfile)
+	if err != nil {
+		log.Printf("Error fetching existing profile: %v", err)
+		return "", httpErrors.HydrateHttpError("purely/profiles/requests/errors/not-found", 404, "Profile not found after upsert")
+	}
+
 	upsertData := models.Profile{
 		AuthId:   *profile.AuthId,
 		Category: "date",
@@ -349,6 +353,13 @@ func (profileService *ProfileService) UpsertDatingProfile(ctx context.Context, p
 			if err != nil {
 				return "", httpErrors.HydrateHttpError("purely/profiles/requests/errors/invalid-image-id", 400, "Invalid image ID")
 			}
+			PubSub.GetClient().PublishToService(ctx, "media", PubSub.PublishMessageType{
+				Type: "blurImage",
+				Data: map[string]interface{}{
+					"mediaID":   mediaID.Hex(),
+					"profileID": existingProfile.ID.Hex(),
+				},
+			})
 			mediaElements = append(mediaElements, models.MediaType{
 				MediaID: mediaID,
 				Order:   media.Order,
@@ -375,12 +386,6 @@ func (profileService *ProfileService) UpsertDatingProfile(ctx context.Context, p
 	}
 	if upsertResult.UpsertedID != nil {
 		return upsertResult.UpsertedID.(primitive.ObjectID).Hex(), nil
-	}
-	existingProfile := models.Profile{}
-	err = models.FindOne(ctx, database.Mongo().Db(), filter).Decode(&existingProfile)
-	if err != nil {
-		log.Printf("Error fetching existing profile: %v", err)
-		return "", httpErrors.HydrateHttpError("purely/profiles/requests/errors/not-found", 404, "Profile not found after upsert")
 	}
 	return existingProfile.ID.Hex(), nil
 }
@@ -492,76 +497,46 @@ func (profileService *ProfileService) GetProfiles(ctx context.Context, data prof
 	return profiles, nil
 }
 
-func (profileService *ProfileService) GenerateMediaUploadSignedUrl(ctx context.Context, mediaUploadData profileServiceTypes.GenerateMediaUploadSignedUrlType) (*profileServiceTypes.GenerateMediaUploadSignedUrlResType, error) {
-	id := uuid.New()
-	signedUrlData, error := profileService.StorageProvider.GenerateSignedUrl(
-		"purely-profiles",
-		fmt.Sprintf("profiles/%s/media/%s/%s/%s/%s",
-			mediaUploadData.AuthId,
-			mediaUploadData.Purpose,
-			mediaUploadData.MimeType,
-			id.String(),
-			mediaUploadData.FileName),
-		mediaUploadData.MimeType,
-		mediaUploadData.FileSize)
-	if error != nil {
-		log.Printf("Error generating signed URL: %v", error)
-		return nil, httpErrors.HydrateHttpError("purely/profiles/requests/errors/could-not-generate-signed-url", 500, "Failed to generate signed URL")
-	}
-	return &profileServiceTypes.GenerateMediaUploadSignedUrlResType{
-		SignedUrl: signedUrlData.SignedUrl,
-		Expiry:    signedUrlData.Expires.Unix(),
-	}, nil
-}
-
-func (profileService *ProfileService) GenerateMultipartUploadUrls(mediaUploadData profileServiceTypes.GenerateMultipartUploadUrlsType) (*profileServiceTypes.GenerateMultipartUploadUrlsResType, error) {
-	id := uuid.New()
-	bucket := "purely-public-assets"
-	filePath := fmt.Sprintf("profiles/%s/media/%s/%s/%s/%s",
-		mediaUploadData.AuthId,
-		mediaUploadData.Purpose,
-		mediaUploadData.MimeType,
-		id.String(),
-		mediaUploadData.FileName)
-	uploadData, err := profileService.StorageProvider.InitiateMultipartUpload(
-		bucket,
-		filePath,
-		mediaUploadData.MimeType,
-		mediaUploadData.FileSize,
-	)
+func (profileService *ProfileService) UpsertProfileBlurredImage(ctx context.Context, mediaID string, blurredImageID string, profileID string) {
+	mediaObjectID, err := primitive.ObjectIDFromHex(mediaID)
 	if err != nil {
-		return nil, err
+		log.Printf("Invalid mediaObjectID: %v", err)
+		return
 	}
-	res, err := profileService.StorageProvider.GenerateSignedURLsForParts(bucket, filePath, uploadData.UploadId, int(mediaUploadData.PartsCount))
+	profileObjectID, err := primitive.ObjectIDFromHex(profileID)
 	if err != nil {
-		return nil, err
+		log.Printf("Invalid blurredMediaID: %v", err)
+		return
 	}
-	return &profileServiceTypes.GenerateMultipartUploadUrlsResType{
-		SignedUrls: res.SignedUrls,
-		Expiry:     res.Expiry.Unix(),
-		UploadID:   uploadData.UploadId,
-		FilePath:   filePath,
-	}, nil
-}
-
-func (profileService *ProfileService) CompleteMultipartUpload(ctx context.Context, mediaUploadData profileServiceTypes.CompleteMultipartUploadType) (*profileServiceTypes.CompleteMultipartUploadResType, error) {
-	res, err := profileService.StorageProvider.CompleteMultipartUpload("purely-public-assets", mediaUploadData.UploadID, mediaUploadData.FilePath, mediaUploadData.Parts)
+	blurredImageObjectID, err := primitive.ObjectIDFromHex(blurredImageID)
 	if err != nil {
-		return nil, err
+		log.Printf("Invalid blurredImageID: %v", err)
+		return
 	}
-	pathSplits := strings.Split(mediaUploadData.FilePath, "/")
-	mimeType := pathSplits[len(pathSplits)-3]
-	media, err := models.Create(ctx, database.Mongo().Db(), models.Media{
-		ID:  primitive.NewObjectID(),
-		Url: *res,
-		EXT: mimeType,
+	profile := models.FindOne(ctx, database.Mongo().Db(), models.Profile{
+		ID: profileObjectID,
 	})
-	if err != nil {
-		log.Printf("Error creating media entry: %v", err)
-		return nil, err
+	if profile.Err() != nil {
+		log.Printf("Error fetching profile: %v", profile.Err())
+		return
 	}
-	return &profileServiceTypes.CompleteMultipartUploadResType{
-		URL: *res,
-		ID:  media.InsertedID.(primitive.ObjectID).Hex(),
-	}, nil
+	var profileData models.Profile
+	if err := profile.Decode(&profileData); err != nil {
+		log.Printf("Error decoding profile: %v", err)
+		return
+	}
+	media := profileData.Media
+	mediaArr := []models.MediaType{}
+	for _, mediaEle := range media {
+		currMediaEle := mediaEle
+		if mediaEle.MediaID == mediaObjectID {
+			currMediaEle.BlurredImageID = blurredImageObjectID
+		}
+		mediaArr = append(mediaArr, currMediaEle)
+	}
+	profileData.Media = mediaArr
+	_, err = models.Upsert(ctx, database.Mongo().Db(), bson.M{"_id": profileObjectID}, profileData)
+	if err != nil {
+		log.Printf("Error updating profile: %v", err)
+	}
 }

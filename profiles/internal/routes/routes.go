@@ -1,10 +1,8 @@
 package routes
 
 import (
-	"profiles/internal/config"
 	"profiles/internal/controllers"
 	"profiles/internal/middlewares/authMiddlewares"
-	"profiles/internal/providers/storage"
 	"profiles/internal/services"
 
 	"github.com/gofiber/fiber/v2"
@@ -24,16 +22,9 @@ func (r *Router) InitRoutes(router fiber.Router) {
 		},
 	}
 
-	storageProviderInstance, err := storage.NewAWSStorageProvider(config.GetConfig().AWS.Region, config.GetConfig().AWS.AWSAccessKeyId, config.GetConfig().AWS.AWSSecretAccessKey)
-	if err != nil {
-		panic(err)
-	}
-
 	profileRoutes := ProfileRoutes{
 		profileController: controllers.ProfileController{
-			ProfileService: services.ProfileService{
-				StorageProvider: storageProviderInstance,
-			},
+			ProfileService: services.ProfileService{},
 		},
 	}
 
@@ -44,4 +35,12 @@ func (r *Router) InitRoutes(router fiber.Router) {
 	profileRoutesGroup := router.Group("/")
 	profileRoutesGroup.Use(authMiddlewares.VerifyUserAccess)
 	profileRoutes.InitRoutes(profileRoutesGroup)
+
+	internalRoutesGroup := router.Group("/internal")
+	internalRoutes := InternalRoutes{
+		InternalController: controllers.InternalController{
+			InternalService: services.InternalService{},
+		},
+	}
+	internalRoutes.InitRoutes(internalRoutesGroup)
 }

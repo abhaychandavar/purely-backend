@@ -18,7 +18,4 @@ func (profileRoutes *ProfileRoutes) InitRoutes(router fiber.Router) {
 	router.Get("/:profileCategory/layout", profileRoutes.profileController.GetProfileLayout)
 	router.Patch("/:profileCategory/upsert", profileRoutes.profileController.UpsertDatingProfile)
 	router.Get("/:profileCategory/profiles", profileRoutes.profileController.GetProfiles)
-	router.Post("/media/signed-url", profileRoutes.profileController.GenerateMediaUploadSignedUrl)
-	router.Post("/media/multipart/signed-urls", profileRoutes.profileController.GenerateMultipartUploadUrls)
-	router.Post("/media/multipart/complete", profileRoutes.profileController.CompleteMultipartUpload)
 }

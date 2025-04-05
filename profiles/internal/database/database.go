@@ -7,6 +7,7 @@ import (
 	"profiles/internal/config"
 	"profiles/internal/database/models"
 	"reflect"
+	"strings"
 	"sync"
 	"time"
 
@@ -32,7 +33,7 @@ var (
 	once     sync.Once
 )
 
-func createAuthIndexes(client *mongo.Client, model interface{}, collectionName string) error {
+func createIndexes(client *mongo.Client, model interface{}, collectionName string) error {
 	collection := client.Database(config.GetConfig().Db).Collection(collectionName)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -52,8 +53,10 @@ func createAuthIndexes(client *mongo.Client, model interface{}, collectionName s
 
 		// If the field has a BSON tag and is unique
 		if bsonTag != "" && uniqueTag == "true" {
+			parts := strings.Split(bsonTag, ",")
+			tagName := parts[0]
 			indexModel := mongo.IndexModel{
-				Keys:    bson.D{{Key: bsonTag, Value: 1}}, // Create an ascending index
+				Keys:    bson.D{{Key: tagName, Value: 1}}, // Create an ascending index
 				Options: options.Index().SetUnique(true),
 			}
 			indexModels = append(indexModels, indexModel)
@@ -73,7 +76,7 @@ func createAuthIndexes(client *mongo.Client, model interface{}, collectionName s
 func (s *service) init() {
 	models := models.GetModels()
 	for _, modelProvider := range models {
-		if err := createAuthIndexes(s.client, modelProvider.Model, modelProvider.CollectionName); err != nil {
+		if err := createIndexes(s.client, modelProvider.Model, modelProvider.CollectionName); err != nil {
 			log.Printf("error creating indexes for model %T: %v", modelProvider.Model, err)
 		}
 	}
@@ -114,5 +117,6 @@ func (s *service) Client() *mongo.Client {
 }
 
 func (s *service) Db() *mongo.Database {
+	fmt.Println("Db Name: ", s.db.Name())
 	return s.db
 }

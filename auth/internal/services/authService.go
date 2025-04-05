@@ -29,7 +29,7 @@ func (authService *AuthService) InsertAuth(ctx *context.Context, auth models.Aut
 }
 
 func (authService *AuthService) GetAuthToken(ctx *context.Context, uid *string) (string, error) {
-	fmt.Printf("UID %s", *uid)
+	fmt.Println("UID %s", *uid)
 	auth := models.FindOne(ctx, database.Mongo().Db(), models.Auth{Identifier: *uid})
 	if auth.Err() != nil {
 		log.Default().Println(auth.Err().Error())
