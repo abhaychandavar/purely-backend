@@ -23,11 +23,9 @@ type PubSubMessagePayload struct {
 	} `json:"message"`
 }
 
-type PubSubMessage struct {
-	Message struct {
-		Data       string            `json:"data"`
-		Attributes map[string]string `json:"attributes"`
-	} `json:"message"`
+type PubSubMessageType struct {
+	Data map[string]interface{} `json:"data"`
+	Type string                 `json:"type"`
 }
 
 func (ic *InternalController) BlurImage(c *fiber.Ctx) error {
