@@ -58,7 +58,12 @@ func (ic *InternalController) HandlePubSubMessage(c *fiber.Ctx) error {
 		C: c,
 		Handler: func(ctx context.Context, data interface{}) (interface{}, error) {
 			fmt.Println("HandlePubSubMessage Data: ", data)
-			res := ic.MediaService.HandlePubSubMessage(ctx, data.(PubSub.PublishMessageType))
+			parsedData, ok := data.(PubSub.PublishMessageType)
+			if !ok {
+				fmt.Println("HandlePubSubMessage Type parsing error")
+				return false, nil
+			}
+			res := ic.MediaService.HandlePubSubMessage(ctx, parsedData)
 			return res, nil
 		},
 		DataExtractor: func(c *fiber.Ctx) interface{} {
