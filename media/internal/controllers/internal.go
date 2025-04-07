@@ -78,7 +78,7 @@ func (ic *InternalController) HandlePubSubMessage(c *fiber.Ctx) error {
 				fmt.Println("HandlePubSubMessage Failed to parse JSON from decoded message: ", err)
 				return c.Status(fiber.StatusBadRequest).SendString("Invalid JSON payload")
 			}
-			fmt.Println("HandlePubSubMessage Data: ", data)
+			fmt.Println("HandlePubSubMessage Formatted Data: ", data)
 			return data
 		},
 		Message: nil,
