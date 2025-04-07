@@ -73,7 +73,7 @@ func (ic *InternalController) HandlePubSubMessage(c *fiber.Ctx) error {
 			if err != nil {
 				return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": "Failed to decode message data"})
 			}
-			var data map[string]interface{}
+			var data PubSubMessageType
 			if err := json.Unmarshal(decoded, &data); err != nil {
 				fmt.Println("Failed to parse JSON from decoded message: ", err)
 				return c.Status(fiber.StatusBadRequest).SendString("Invalid JSON payload")
