@@ -1,5 +1,5 @@
 package PubSub
 
 type PubSubInterface interface {
-	PublishToService(serviceName string, message PublishMessageType) error
+	PublishToService(serviceName string, message PubSubMessageType) error
 }

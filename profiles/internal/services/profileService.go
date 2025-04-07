@@ -383,7 +383,7 @@ func (profileService *ProfileService) UpsertDatingProfile(ctx context.Context, p
 		return upsertResult.UpsertedID.(primitive.ObjectID).Hex(), nil
 	}
 	for _, mediaID := range mediaIDsToBlur {
-		PubSub.GetClient().PublishToService(ctx, "media", PubSub.PublishMessageType{
+		PubSub.GetClient().PublishToService(ctx, "media", PubSub.PubSubMessageType{
 			Type: "blurImage",
 			Data: map[string]interface{}{
 				"mediaID":   mediaID,

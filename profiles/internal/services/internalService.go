@@ -12,7 +12,7 @@ func (i *InternalService) HandleProfileImageBlurred(ctx context.Context, mediaID
 	ps.UpsertProfileBlurredImage(ctx, mediaID, blurredImageID, profileID)
 }
 
-func (i *InternalService) HandlePubSubMessage(ctx context.Context, data PubSub.PublishMessageType) bool {
+func (i *InternalService) HandlePubSubMessage(ctx context.Context, data PubSub.PubSubMessageType) bool {
 	switch data.Type {
 	case "imageBlurred":
 		{

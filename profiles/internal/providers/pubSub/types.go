@@ -1,6 +1,6 @@
 package PubSub
 
-type PublishMessageType struct {
-	Type string                 `json:"type"`
+type PubSubMessageType struct {
 	Data map[string]interface{} `json:"data"`
+	Type string                 `json:"type"`
 }
