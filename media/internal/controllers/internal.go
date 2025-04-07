@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"media/internal/services"
 	"media/internal/utils/helpers/httpHelper"
 	PubSub "media/providers/pubSub"
@@ -49,6 +50,7 @@ func (ic *InternalController) HandlePubSubMessage(c *fiber.Ctx) error {
 	return httpHelper.Controller(httpHelper.ControllerHelperType{
 		C: c,
 		Handler: func(ctx context.Context, data interface{}) (interface{}, error) {
+			fmt.Println("HandlePubSubMessage Data: ", data)
 			res := ic.MediaService.HandlePubSubMessage(ctx, data.(PubSub.PublishMessageType))
 			return res, nil
 		},

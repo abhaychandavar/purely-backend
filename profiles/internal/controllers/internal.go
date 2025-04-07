@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	PubSub "profiles/internal/providers/pubSub"
 	"profiles/internal/services"
@@ -26,6 +27,7 @@ func (ic *InternalController) HandlePubSubMessage(c *fiber.Ctx) error {
 	return httpHelper.Controller(httpHelper.ControllerHelperType{
 		C: c,
 		Handler: func(ctx context.Context, data interface{}) (interface{}, error) {
+			fmt.Println("Data: ", data)
 			res := ic.InternalService.HandlePubSubMessage(ctx, data.(PubSub.PublishMessageType))
 			return res, nil
 		},
