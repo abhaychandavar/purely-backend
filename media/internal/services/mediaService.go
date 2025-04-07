@@ -231,8 +231,8 @@ func (i *MediaService) HandlePubSubMessage(ctx context.Context, data PubSub.PubS
 	case "blurImage":
 		{
 			fmt.Println("handlePubSubMessage blurImage")
-			refID := data.Data["refID"].(string)
-			_, err := i.BlurImage(ctx, data.Data["imageID"].(string), &refID)
+			profileID := data.Data["profileID"].(string)
+			_, err := i.BlurImage(ctx, data.Data["mediaID"].(string), &profileID)
 			if err != nil {
 				log.Printf("Error handling pubsub message: %v", err)
 				return false
