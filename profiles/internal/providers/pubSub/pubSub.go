@@ -34,7 +34,6 @@ func GetClient() *PubSub {
 }
 
 func (ps *PubSub) PublishToService(ctx context.Context, serviceName string, message PublishMessageType) error {
-	fmt.Println("PublishToService called")
 	messageData, err := json.Marshal(message)
 	if err != nil {
 		fmt.Println("PublishToService json marshal error")
@@ -42,13 +41,11 @@ func (ps *PubSub) PublishToService(ctx context.Context, serviceName string, mess
 	}
 
 	topic := ps.client.Topic(serviceName)
-	fmt.Println("PublishToService topic: ", topic)
 	msg := &pubsub.Message{
 		Data: messageData,
 	}
 
 	result := topic.Publish(ctx, msg)
-	fmt.Println("PublishToService published")
 	id, err := result.Get(ctx)
 	if err != nil {
 		fmt.Println("PublishToService errored", err)
