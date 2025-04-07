@@ -24,6 +24,8 @@ type MediaService struct {
 }
 
 func (mediaService *MediaService) BlurImage(ctx context.Context, imageID string, profileID *string) (*string, error) {
+	fmt.Println("Image ID", imageID)
+	fmt.Println("Profile ID", profileID)
 	imageIDPrimitive, err := primitive.ObjectIDFromHex(imageID)
 	if err != nil {
 		return nil, err
