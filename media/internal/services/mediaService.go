@@ -122,7 +122,7 @@ func (mediaService *MediaService) BlurImage(ctx context.Context, imageID string,
 
 func NotifyImageBlurred(ctx context.Context, mediaID string, blurredImageID string, profileID string) {
 	pubsub := *PubSub.GetClient()
-	pubsub.PublishToService(ctx, "profiles", PubSub.PublishMessageType{
+	pubsub.PublishToService(ctx, "profiles", PubSub.PubSubMessageType{
 		Type: "imageBlurred",
 		Data: map[string]interface{}{
 			"mediaID":        mediaID,
@@ -224,7 +224,7 @@ func (profileService *MediaService) CompleteMultipartUpload(ctx context.Context,
 	}, nil
 }
 
-func (i *MediaService) HandlePubSubMessage(ctx context.Context, data PubSub.PublishMessageType) bool {
+func (i *MediaService) HandlePubSubMessage(ctx context.Context, data PubSub.PubSubMessageType) bool {
 	fmt.Println("handlePubSubMessage data", data)
 	fmt.Println("handlePubSubMessage data type", data.Type)
 	switch data.Type {

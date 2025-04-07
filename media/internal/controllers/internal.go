@@ -23,11 +23,6 @@ type PubSubMessagePayload struct {
 	} `json:"message"`
 }
 
-type PubSubMessageType struct {
-	Data map[string]interface{} `json:"data"`
-	Type string                 `json:"type"`
-}
-
 func (ic *InternalController) BlurImage(c *fiber.Ctx) error {
 	return httpHelper.Controller(httpHelper.ControllerHelperType{
 		C: c,
@@ -56,7 +51,7 @@ func (ic *InternalController) HandlePubSubMessage(c *fiber.Ctx) error {
 		C: c,
 		Handler: func(ctx context.Context, data interface{}) (interface{}, error) {
 			fmt.Println("HandlePubSubMessage Data: ", data)
-			parsedData, ok := data.(PubSub.PublishMessageType)
+			parsedData, ok := data.(PubSub.PubSubMessageType)
 			if !ok {
 				fmt.Println("HandlePubSubMessage Type parsing error")
 				return false, nil
@@ -73,7 +68,7 @@ func (ic *InternalController) HandlePubSubMessage(c *fiber.Ctx) error {
 			if err != nil {
 				return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": "Failed to decode message data"})
 			}
-			var data PubSubMessageType
+			var data PubSub.PubSubMessageType
 			if err := json.Unmarshal(decoded, &data); err != nil {
 				fmt.Println("HandlePubSubMessage Failed to parse JSON from decoded message: ", err)
 				return c.Status(fiber.StatusBadRequest).SendString("Invalid JSON payload")

@@ -33,7 +33,7 @@ func GetClient() *PubSub {
 	return pubSub
 }
 
-func (ps *PubSub) PublishToService(ctx context.Context, serviceName string, message PublishMessageType) error {
+func (ps *PubSub) PublishToService(ctx context.Context, serviceName string, message PubSubMessageType) error {
 	messageData, err := json.Marshal(message)
 	if err != nil {
 		return fmt.Errorf("failed to marshal message: %v", err)
