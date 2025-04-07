@@ -24,8 +24,6 @@ type MediaService struct {
 }
 
 func (mediaService *MediaService) BlurImage(ctx context.Context, imageID string, profileID *string) (*string, error) {
-	fmt.Println("BlurImage Image ID", imageID)
-	fmt.Println("BlurImage Profile ID", profileID)
 	imageIDPrimitive, err := primitive.ObjectIDFromHex(imageID)
 	if err != nil {
 		return nil, err
@@ -44,7 +42,7 @@ func (mediaService *MediaService) BlurImage(ctx context.Context, imageID string,
 	if err != nil {
 		return nil, err
 	}
-	blurredImageBytes, _, err := mediahelpers.BlurImage(image, 20)
+	blurredImageBytes, _, err := mediahelpers.BlurImage(image, 40)
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +97,6 @@ func (mediaService *MediaService) BlurImage(ctx context.Context, imageID string,
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("URL <><><><><>", uploadCompleteRes.URL)
 	savedImage, err := models.Create(ctx, database.Mongo().Db(), models.Media{
 		ID:          primitive.NewObjectID(),
 		URL:         uploadCompleteRes.URL,
