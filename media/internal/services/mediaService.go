@@ -24,8 +24,8 @@ type MediaService struct {
 }
 
 func (mediaService *MediaService) BlurImage(ctx context.Context, imageID string, profileID *string) (*string, error) {
-	fmt.Println("Image ID", imageID)
-	fmt.Println("Profile ID", profileID)
+	fmt.Println("BlurImage Image ID", imageID)
+	fmt.Println("BlurImage Profile ID", profileID)
 	imageIDPrimitive, err := primitive.ObjectIDFromHex(imageID)
 	if err != nil {
 		return nil, err
@@ -225,9 +225,12 @@ func (profileService *MediaService) CompleteMultipartUpload(ctx context.Context,
 }
 
 func (i *MediaService) HandlePubSubMessage(ctx context.Context, data PubSub.PublishMessageType) bool {
+	fmt.Println("handlePubSubMessage data", data)
+	fmt.Println("handlePubSubMessage data type", data.Type)
 	switch data.Type {
 	case "blurImage":
 		{
+			fmt.Println("handlePubSubMessage blurImage")
 			refID := data.Data["refID"].(string)
 			_, err := i.BlurImage(ctx, data.Data["imageID"].(string), &refID)
 			if err != nil {
