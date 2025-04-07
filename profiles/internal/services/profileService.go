@@ -346,6 +346,7 @@ func (profileService *ProfileService) UpsertDatingProfile(ctx context.Context, p
 		}
 		upsertData.Prompts = prompts
 	}
+	var mediaIDsToBlur []string
 	if profile.Media != nil {
 		var mediaElements []models.MediaType
 		for _, media := range *profile.Media {
@@ -353,13 +354,7 @@ func (profileService *ProfileService) UpsertDatingProfile(ctx context.Context, p
 			if err != nil {
 				return "", httpErrors.HydrateHttpError("purely/profiles/requests/errors/invalid-image-id", 400, "Invalid image ID")
 			}
-			PubSub.GetClient().PublishToService(ctx, "media", PubSub.PublishMessageType{
-				Type: "blurImage",
-				Data: map[string]interface{}{
-					"mediaID":   mediaID.Hex(),
-					"profileID": existingProfile.ID.Hex(),
-				},
-			})
+			mediaIDsToBlur = append(mediaIDsToBlur, mediaID.Hex())
 			mediaElements = append(mediaElements, models.MediaType{
 				MediaID: mediaID,
 				Order:   media.Order,
@@ -386,6 +381,15 @@ func (profileService *ProfileService) UpsertDatingProfile(ctx context.Context, p
 	}
 	if upsertResult.UpsertedID != nil {
 		return upsertResult.UpsertedID.(primitive.ObjectID).Hex(), nil
+	}
+	for _, mediaID := range mediaIDsToBlur {
+		PubSub.GetClient().PublishToService(ctx, "media", PubSub.PublishMessageType{
+			Type: "blurImage",
+			Data: map[string]interface{}{
+				"mediaID":   mediaID,
+				"profileID": existingProfile.ID.Hex(),
+			},
+		})
 	}
 	return existingProfile.ID.Hex(), nil
 }
