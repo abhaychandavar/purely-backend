@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"media/internal/services"
@@ -14,6 +15,12 @@ import (
 
 type InternalController struct {
 	MediaService services.MediaService
+}
+
+type PubSubMessagePayload struct {
+	Message struct {
+		Data string `json:"data"`
+	} `json:"message"`
 }
 
 type PubSubMessage struct {
@@ -55,15 +62,21 @@ func (ic *InternalController) HandlePubSubMessage(c *fiber.Ctx) error {
 			return res, nil
 		},
 		DataExtractor: func(c *fiber.Ctx) interface{} {
-			var msg PubSubMessage
+			var msg PubSubMessagePayload
 			if err := c.BodyParser(&msg); err != nil {
 				return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": "Failed to parse request body"})
 			}
-			var pubSubMessageData PubSub.PublishMessageType
-			if err := json.Unmarshal([]byte(msg.Message.Data), &pubSubMessageData); err != nil {
-				return map[string]interface{}{}
+			decoded, err := base64.StdEncoding.DecodeString(msg.Message.Data)
+			if err != nil {
+				return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": "Failed to decode message data"})
 			}
-			return pubSubMessageData
+			var data map[string]interface{}
+			if err := json.Unmarshal(decoded, &data); err != nil {
+				fmt.Println("Failed to parse JSON from decoded message: ", err)
+				return c.Status(fiber.StatusBadRequest).SendString("Invalid JSON payload")
+			}
+			fmt.Println("HandlePubSubMessage Data: ", data)
+			return data
 		},
 		Message: nil,
 		Code:    nil,
