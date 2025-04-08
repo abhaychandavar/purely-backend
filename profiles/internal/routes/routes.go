@@ -28,14 +28,6 @@ func (r *Router) InitRoutes(router fiber.Router) {
 		},
 	}
 
-	locationRoutesGroup := router.Group("/locations")
-	locationRoutesGroup.Use(authMiddlewares.VerifyUserAccess)
-	locationRoutes.InitRoutes(locationRoutesGroup)
-
-	profileRoutesGroup := router.Group("/")
-	profileRoutesGroup.Use(authMiddlewares.VerifyUserAccess)
-	profileRoutes.InitRoutes(profileRoutesGroup)
-
 	internalRoutesGroup := router.Group("/internal")
 	internalRoutes := InternalRoutes{
 		InternalController: controllers.InternalController{
@@ -43,4 +35,12 @@ func (r *Router) InitRoutes(router fiber.Router) {
 		},
 	}
 	internalRoutes.InitRoutes(internalRoutesGroup)
+
+	locationRoutesGroup := router.Group("/locations")
+	locationRoutesGroup.Use(authMiddlewares.VerifyUserAccess)
+	locationRoutes.InitRoutes(locationRoutesGroup)
+
+	profileRoutesGroup := router.Group("/")
+	profileRoutesGroup.Use(authMiddlewares.VerifyUserAccess)
+	profileRoutes.InitRoutes(profileRoutesGroup)
 }
