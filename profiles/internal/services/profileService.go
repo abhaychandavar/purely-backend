@@ -502,53 +502,43 @@ func (profileService *ProfileService) GetProfiles(ctx context.Context, data prof
 }
 
 func (profileService *ProfileService) UpsertProfileBlurredImage(ctx context.Context, mediaID string, blurredImageID string, profileID string) {
-	fmt.Println("UpsertProfileBlurredImage 1", mediaID, blurredImageID, profileID)
 	mediaObjectID, err := primitive.ObjectIDFromHex(mediaID)
 	if err != nil {
 		log.Printf("Invalid mediaObjectID: %v", err)
 		return
 	}
-	fmt.Println("UpsertProfileBlurredImage 2")
 	profileObjectID, err := primitive.ObjectIDFromHex(profileID)
 	if err != nil {
 		log.Printf("Invalid blurredMediaID: %v", err)
 		return
 	}
-	fmt.Println("UpsertProfileBlurredImage 3")
 	blurredImageObjectID, err := primitive.ObjectIDFromHex(blurredImageID)
 	if err != nil {
 		log.Printf("Invalid blurredImageID: %v", err)
 		return
 	}
-	fmt.Println("UpsertProfileBlurredImage 4")
 	profile := models.FindOne(ctx, database.Mongo().Db(), models.Profile{
 		ID: profileObjectID,
 	})
-	fmt.Println("UpsertProfileBlurredImage 5")
 	if profile.Err() != nil {
 		log.Printf("Error fetching profile: %v", profile.Err())
 		return
 	}
-	fmt.Println("UpsertProfileBlurredImage 6")
 	var profileData models.Profile
 	if err := profile.Decode(&profileData); err != nil {
 		log.Printf("Error decoding profile: %v", err)
 		return
 	}
-	fmt.Println("UpsertProfileBlurredImage 7")
 	media := profileData.Media
 	mediaArr := []models.MediaType{}
 	for _, mediaEle := range media {
 		currMediaEle := mediaEle
-		fmt.Println("UpsertProfileBlurredImage 7.1", mediaEle.MediaID.Hex(), mediaObjectID.Hex(), mediaEle.MediaID.Hex() == mediaObjectID.Hex())
 		if mediaEle.MediaID.Hex() == mediaObjectID.Hex() {
 			currMediaEle.BlurredImageID = blurredImageObjectID
 		}
 		mediaArr = append(mediaArr, currMediaEle)
 	}
-	fmt.Println("UpsertProfileBlurredImage 7.2", mediaArr)
 	profileData.Media = mediaArr
-	fmt.Println("UpsertProfileBlurredImage 8", profileData)
 	_, err = models.Upsert(ctx, database.Mongo().Db(), bson.M{"_id": profileObjectID}, profileData)
 	if err != nil {
 		log.Printf("Error updating profile: %v", err)
