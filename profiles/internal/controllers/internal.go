@@ -32,6 +32,7 @@ func (ic *InternalController) HandlePubSubMessage(c *fiber.Ctx) error {
 			return res, nil
 		},
 		DataExtractor: func(c *fiber.Ctx) interface{} {
+			fmt.Println("HandlePubSubMessage DataExtractor called")
 			var msg PubSubMessagePayload
 			if err := c.BodyParser(&msg); err != nil {
 				return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": "Failed to parse request body"})
