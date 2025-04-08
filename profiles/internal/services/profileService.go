@@ -540,11 +540,13 @@ func (profileService *ProfileService) UpsertProfileBlurredImage(ctx context.Cont
 	mediaArr := []models.MediaType{}
 	for _, mediaEle := range media {
 		currMediaEle := mediaEle
-		if mediaEle.MediaID == mediaObjectID {
+		fmt.Println("UpsertProfileBlurredImage 7.1", mediaEle.MediaID.Hex(), mediaObjectID.Hex(), mediaEle.MediaID.Hex() == mediaObjectID.Hex())
+		if mediaEle.MediaID.Hex() == mediaObjectID.Hex() {
 			currMediaEle.BlurredImageID = blurredImageObjectID
 		}
 		mediaArr = append(mediaArr, currMediaEle)
 	}
+	fmt.Println("UpsertProfileBlurredImage 7.2", mediaArr)
 	profileData.Media = mediaArr
 	fmt.Println("UpsertProfileBlurredImage 8", profileData)
 	_, err = models.Upsert(ctx, database.Mongo().Db(), bson.M{"_id": profileObjectID}, profileData)
