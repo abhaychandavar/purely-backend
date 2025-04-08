@@ -27,12 +27,10 @@ func (ic *InternalController) HandlePubSubMessage(c *fiber.Ctx) error {
 	return httpHelper.Controller(httpHelper.ControllerHelperType{
 		C: c,
 		Handler: func(ctx context.Context, data interface{}) (interface{}, error) {
-			fmt.Println("HandlePubSubMessage Data: ", data)
 			res := ic.InternalService.HandlePubSubMessage(ctx, data.(PubSub.PubSubMessageType))
 			return res, nil
 		},
 		DataExtractor: func(c *fiber.Ctx) interface{} {
-			fmt.Println("HandlePubSubMessage DataExtractor called")
 			var msg PubSubMessagePayload
 			if err := c.BodyParser(&msg); err != nil {
 				return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": "Failed to parse request body"})
@@ -46,7 +44,6 @@ func (ic *InternalController) HandlePubSubMessage(c *fiber.Ctx) error {
 				fmt.Println("Failed to parse JSON from decoded message: ", err)
 				return c.Status(fiber.StatusBadRequest).SendString("Invalid JSON payload")
 			}
-			fmt.Println("HandlePubSubMessage Data: ", data)
 			return data
 		},
 		Message: nil,

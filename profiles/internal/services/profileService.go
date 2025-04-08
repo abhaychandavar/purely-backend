@@ -496,8 +496,6 @@ func (profileService *ProfileService) GetProfiles(ctx context.Context, data prof
 		log.Printf("Error decoding profiles: %v", err)
 		return nil, err
 	}
-
-	log.Printf("Found %d profiles within 60 km radius", len(profiles))
 	return profiles, nil
 }
 

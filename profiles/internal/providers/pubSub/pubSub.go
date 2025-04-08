@@ -46,12 +46,11 @@ func (ps *PubSub) PublishToService(ctx context.Context, serviceName string, mess
 	}
 
 	result := topic.Publish(ctx, msg)
-	id, err := result.Get(ctx)
+	_, err = result.Get(ctx)
 	if err != nil {
 		fmt.Println("PublishToService errored", err)
 		return fmt.Errorf("failed to publish message: %v", err)
 	}
 
-	fmt.Printf("PublishToService Message published with ID: %s", id)
 	return nil
 }

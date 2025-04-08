@@ -2,7 +2,6 @@ package authMiddlewares
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"profiles/internal/config"
 	"profiles/internal/types/appTypes"
@@ -23,8 +22,6 @@ func VerifyInternalAccess(c *fiber.Ctx) error {
 	if len(accessToken) == 0 {
 		accessToken = c.Query("accessToken")
 	}
-
-	fmt.Println("Internal_Access Token", accessToken)
 
 	if len(accessToken) == 0 {
 		return httpHelper.SendErrorResponse(c, httpErrors.HydrateHttpError("purely/requests/errors/unauthorized", 401, "Unauthorized"))

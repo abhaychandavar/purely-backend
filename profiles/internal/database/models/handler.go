@@ -3,7 +3,6 @@ package models
 import (
 	"context"
 	"fmt"
-	"log"
 	"reflect"
 	"time"
 
@@ -82,7 +81,6 @@ func Create(ctx context.Context, db *mongo.Database, model interface{}) (*mongo.
 	for k, v := range additionalFields {
 		data[k] = v // Add additional fields
 	}
-	log.Default().Printf("collection name %s", collectionName)
 	collection := db.Collection(collectionName)
 	result, err := collection.InsertOne(ctx, data)
 	if err != nil {
@@ -195,15 +193,12 @@ func Upsert(
 
 	// Check if a document matching `where` exists
 	var existingData bson.M
-	log.Default().Printf("filter %v", filter)
 	var where map[string]interface{}
 	filterMashal, marshalErr := bson.Marshal(filter)
 	if marshalErr != nil {
 		return nil, fmt.Errorf("failed to marshal filter: %v", marshalErr)
 	}
 	bson.Unmarshal(filterMashal, &where)
-
-	log.Default().Printf("where %v", where)
 
 	err := collection.FindOne(ctx, where).Decode(&existingData)
 
