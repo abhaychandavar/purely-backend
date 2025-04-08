@@ -34,6 +34,7 @@ func (r *Router) InitRoutes(router fiber.Router) {
 			InternalService: services.InternalService{},
 		},
 	}
+	internalRoutesGroup.Use(authMiddlewares.VerifyInternalAccess)
 	internalRoutes.InitRoutes(internalRoutesGroup)
 
 	locationRoutesGroup := router.Group("/locations")
