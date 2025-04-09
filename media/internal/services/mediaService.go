@@ -97,24 +97,35 @@ func (mediaService *MediaService) BlurImage(ctx context.Context, imageID string,
 	if err != nil {
 		return nil, err
 	}
-	savedImage, err := models.Create(ctx, database.Mongo().Db(), models.Media{
-		ID:          primitive.NewObjectID(),
-		URL:         uploadCompleteRes.URL,
-		EXT:         constants.FileExtMap[blurredImageType],
-		Path:        uploadCompleteRes.Path,
-		Domain:      uploadCompleteRes.Domain,
-		ContentType: blurredImageType,
-		FileName:    fileName,
-		Size:        fileSize,
+	existingImage := models.FindOne(ctx, database.Mongo().Db(), models.Media{
+		URL: uploadCompleteRes.URL,
 	})
-	if err != nil {
+	var blurredMediaID string
+	if existingImage.Err() != nil {
+		savedImage, err := models.Create(ctx, database.Mongo().Db(), models.Media{
+			ID:          primitive.NewObjectID(),
+			URL:         uploadCompleteRes.URL,
+			EXT:         constants.FileExtMap[blurredImageType],
+			Path:        uploadCompleteRes.Path,
+			Domain:      uploadCompleteRes.Domain,
+			ContentType: blurredImageType,
+			FileName:    fileName,
+			Size:        fileSize,
+		})
+		if err != nil {
+			return nil, err
+		}
+		blurredMediaID = savedImage.InsertedID.(primitive.ObjectID).Hex()
+	}
+	var blurredImageData models.Media
+	if err := existingImage.Decode(&blurredImageData); err != nil {
 		return nil, err
 	}
-	insertedID := savedImage.InsertedID.(primitive.ObjectID).Hex()
+	blurredMediaID = blurredImageData.ID.Hex()
 	if profileID != nil {
-		NotifyImageBlurred(ctx, imageID, insertedID, *profileID)
+		NotifyImageBlurred(ctx, imageID, blurredMediaID, *profileID)
 	}
-	return &insertedID, nil
+	return &blurredMediaID, nil
 }
 
 func NotifyImageBlurred(ctx context.Context, mediaID string, blurredImageID string, profileID string) {
