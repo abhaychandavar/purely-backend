@@ -24,29 +24,42 @@ type MediaService struct {
 }
 
 func (mediaService *MediaService) BlurImage(ctx context.Context, imageID string, profileID *string) (*string, error) {
+	fmt.Println(">>BlurImage 1", imageID)
+	if profileID != nil {
+		fmt.Println(">>BlurImage 2", *profileID)
+	}
+	fmt.Println(">>BlurImage 3")
 	imageIDPrimitive, err := primitive.ObjectIDFromHex(imageID)
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println(">>BlurImage 4")
 	imageMediaDataCur := models.FindOne(ctx, database.Mongo().Db(), models.Media{
 		ID: imageIDPrimitive,
 	})
+	fmt.Println(">>BlurImage 5")
 	if imageMediaDataCur.Err() != nil {
 		return nil, httpErrors.HydrateHttpError("purely/media/notFound", 404, "Not found")
 	}
+	fmt.Println(">>BlurImage 6")
 	var imageMediaData models.Media
 	if err := imageMediaDataCur.Decode(&imageMediaData); err != nil {
+		fmt.Println(">>BlurImage 7", err)
 		return nil, err
 	}
+	fmt.Println(">>BlurImage 8")
 	_, image, err := httpHelper.DownloadImageFromSignedURL(imageMediaData.URL)
 	if err != nil {
+		fmt.Println(">>BlurImage 8", err)
 		return nil, err
 	}
+	fmt.Println(">>BlurImage 9")
 	blurredImageBytes, _, err := mediahelpers.BlurImage(image, 40)
 	if err != nil {
+		fmt.Println(">>BlurImage 10", err)
 		return nil, err
 	}
-
+	fmt.Println(">>BlurImage 11")
 	rawFilePath := "blurred/" + imageMediaData.Path
 	fileName := imageMediaData.FileName
 	bucketName := "purely-public-assets"
@@ -54,7 +67,7 @@ func (mediaService *MediaService) BlurImage(ctx context.Context, imageID string,
 	blurredImageType := "image/jpeg"
 	filePathSplits := strings.Split(rawFilePath, imageMediaData.ContentType)
 	filePath := filePathSplits[0] + blurredImageType + filePathSplits[1]
-
+	fmt.Println(">>BlurImage 12")
 	initUploadRes, err := mediaService.StorageProvider.InitiateMultipartUpload(
 		bucketName,
 		filePath,
@@ -62,11 +75,12 @@ func (mediaService *MediaService) BlurImage(ctx context.Context, imageID string,
 		blurredImageType,
 		fileSize,
 	)
-
+	fmt.Println(">>BlurImage 13")
 	if err != nil {
+		fmt.Println(">>BlurImage 14", err)
 		return nil, err
 	}
-
+	fmt.Println(">>BlurImage 15")
 	signedURLsRes, err := mediaService.StorageProvider.GenerateSignedURLsForParts(
 		bucketName,
 		filePath,
@@ -75,8 +89,10 @@ func (mediaService *MediaService) BlurImage(ctx context.Context, imageID string,
 		blurredImageType,
 		fileSize)
 	if err != nil {
+		fmt.Println(">>BlurImage 16", err)
 		return nil, err
 	}
+	fmt.Println(">>BlurImage 17")
 	uploadRes, err := mediaService.StorageProvider.UploadFile(
 		signedURLsRes.SignedUrls,
 		blurredImageBytes,
@@ -84,8 +100,10 @@ func (mediaService *MediaService) BlurImage(ctx context.Context, imageID string,
 		blurredImageType,
 	)
 	if err != nil {
+		fmt.Println(">>BlurImage 18", err)
 		return nil, err
 	}
+	fmt.Println(">>BlurImage 19")
 	uploadCompleteRes, err := mediaService.StorageProvider.CompleteMultipartUpload(
 		bucketName,
 		initUploadRes.UploadId,
@@ -95,11 +113,14 @@ func (mediaService *MediaService) BlurImage(ctx context.Context, imageID string,
 		uploadRes,
 	)
 	if err != nil {
+		fmt.Println(">>BlurImage 20", err)
 		return nil, err
 	}
 	existingImage := models.FindOne(ctx, database.Mongo().Db(), models.Media{
 		URL: uploadCompleteRes.URL,
 	})
+	fmt.Println(">>BlurImage 21")
+	fmt.Println("existingImage", existingImage)
 	var blurredMediaID string
 	if existingImage.Err() != nil {
 		savedImage, err := models.Create(ctx, database.Mongo().Db(), models.Media{
