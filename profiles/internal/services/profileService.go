@@ -10,6 +10,7 @@ import (
 	profileLayoutTypes "profiles/internal/types/profileLayout"
 	"profiles/internal/types/profileServiceTypes"
 	httpErrors "profiles/internal/utils/helpers/httpError"
+	"unicode"
 
 	"github.com/mmcloughlin/geohash"
 	"go.mongodb.org/mongo-driver/bson"
@@ -355,10 +356,19 @@ func (profileService *ProfileService) UpsertDatingProfile(ctx context.Context, p
 				return "", httpErrors.HydrateHttpError("purely/profiles/requests/errors/invalid-image-id", 400, "Invalid image ID")
 			}
 			mediaIDsToBlur = append(mediaIDsToBlur, mediaID.Hex())
-			mediaElements = append(mediaElements, models.MediaType{
+			var blurredImageID *primitive.ObjectID
+			blurredImageObjectID, err := primitive.ObjectIDFromHex(media.BlurredImageID)
+			if err != nil {
+				blurredImageID = &blurredImageObjectID
+			}
+			toAppendMediaEle := models.MediaType{
 				MediaID: mediaID,
 				Order:   media.Order,
-			})
+			}
+			if blurredImageID != nil {
+				toAppendMediaEle.BlurredImageID = *blurredImageID
+			}
+			mediaElements = append(mediaElements, toAppendMediaEle)
 		}
 		upsertData.Media = mediaElements
 	}
@@ -443,11 +453,10 @@ func (profileService *ProfileService) GetGenders(ctx context.Context, data profi
 	}, nil
 }
 
-func (profileService *ProfileService) GetProfiles(ctx context.Context, data profileServiceTypes.GetProfilesType) ([]models.Profile, error) {
-	limit := 20
+func (profileService *ProfileService) GetProfiles(ctx context.Context, data profileServiceTypes.GetProfilesType) ([]primitive.M, error) {
+	// limit := 20
 	var profileData models.Profile
-
-	// Fetch the self profile to get the location coordinates
+	fmt.Println("Called Get Profiles")
 	err := models.FindOne(ctx, database.Mongo().Db(), models.Profile{
 		AuthId:   data.AuthId,
 		Category: data.Category,
@@ -460,42 +469,217 @@ func (profileService *ProfileService) GetProfiles(ctx context.Context, data prof
 	if profileData.Location == nil {
 		return nil, httpErrors.HydrateHttpError("purely/profiles/requests/errors/no-location-provided", 400, "Location required to find relevant matches")
 	}
-	location := profileData.Location
-	latLng := location.Coordinates
+	// latLng := profileData.Location.Coordinates
 
-	radius := 10000 // in meters
-	if profileData.PreferredMatchDistance > 0 {
-		radius = profileData.PreferredMatchDistance * 1000
-	}
+	// radius := 10000.0
+	// if profileData.PreferredMatchDistance > 0 {
+	// 	radius = float64(profileData.PreferredMatchDistance * 1000)
+	// }
 
-	// Geospatial query to find profiles within the radius
-	filter := bson.M{
-		"authId": bson.M{
-			"$ne": data.AuthId,
-		},
-		"location": bson.M{
-			"$geoWithin": bson.M{
-				"$centerSphere": []interface{}{
-					latLng,
-					radius / 6378100.0,
+	// pipeline := mongo.Pipeline{
+	// 	// 1. Geo filter
+	// 	// {{Key: "$geoNear", Value: bson.M{
+	// 	// 	"near":          bson.M{"type": "Point", "coordinates": latLng},
+	// 	// 	"distanceField": "distance",
+	// 	// 	"maxDistance":   radius,
+	// 	// 	"spherical":     true,
+	// 	// 	"query": bson.M{
+	// 	// 		"authId":   bson.M{"$ne": data.AuthId},
+	// 	// 		"category": data.Category,
+	// 	// 		"status":   "active",
+	// 	// 	},
+	// 	// }}},
+	// 	// 2. Unwind media
+	// 	{{Key: "$unwind", Value: bson.M{
+	// 		"path":                       "$media",
+	// 		"preserveNullAndEmptyArrays": true,
+	// 	}}},
+	// 	// 3. Lookup media.mediaID
+	// 	{{Key: "$lookup", Value: bson.M{
+	// 		"from":         "media",
+	// 		"localField":   "media.mediaID",
+	// 		"foreignField": "_id",
+	// 		"as":           "mediaData",
+	// 	}}},
+	// 	// 4. Lookup media.blurredImageID
+	// 	{{Key: "$lookup", Value: bson.M{
+	// 		"from":         "media",
+	// 		"localField":   "media.blurredImageID",
+	// 		"foreignField": "_id",
+	// 		"as":           "blurredMediaData",
+	// 	}}},
+	// 	// 5. Merge looked-up fields
+	// 	{{Key: "$addFields", Value: bson.M{
+	// 		"media.mediaData":        bson.M{"$arrayElemAt": []interface{}{"$mediaData", 0}},
+	// 		"media.blurredMediaData": bson.M{"$arrayElemAt": []interface{}{"$blurredMediaData", 0}},
+	// 	}}},
+	// 	// 6. Group back media array
+	// 	{{Key: "$group", Value: bson.M{
+	// 		"_id":     "$_id",
+	// 		"profile": bson.M{"$first": "$$ROOT"},
+	// 		"media":   bson.M{"$push": "$media"},
+	// 	}}},
+	// 	// 7. Merge grouped media back into profile
+	// 	{{Key: "$addFields", Value: bson.M{
+	// 		"profile.media": "$media",
+	// 	}}},
+	// 	{{Key: "$replaceRoot", Value: bson.M{
+	// 		"newRoot": "$profile",
+	// 	}}},
+	// 	// 8. Limit
+	// 	{{Key: "$limit", Value: limit}},
+	// }
+	fmt.Println("Get profiles called")
+	pipeline := mongo.Pipeline{
+		// Match by category
+		{{Key: "$match", Value: bson.M{"category": data.Category}}},
+
+		// Lookup mediaDetails for each media.mediaID
+		{{Key: "$lookup", Value: bson.M{
+			"from": "media",
+			"let":  bson.M{"mediaArray": "$media"},
+			"pipeline": mongo.Pipeline{
+				{{Key: "$match", Value: bson.M{
+					"$expr": bson.M{"$in": bson.A{"$_id", "$$mediaArray.mediaID"}},
+				}}},
+			},
+			"as": "mediaDetails",
+		}}},
+
+		// Lookup blurredMediaDetails for each media.blurredImageID
+		{{Key: "$lookup", Value: bson.M{
+			"from": "media",
+			"let": bson.M{"blurredIds": bson.M{
+				"$map": bson.M{
+					"input": "$media",
+					"as":    "m",
+					"in":    "$$m.blurredImageID",
+				},
+			}},
+			"pipeline": mongo.Pipeline{
+				{{Key: "$match", Value: bson.M{
+					"$expr": bson.M{"$in": bson.A{"$_id", "$$blurredIds"}},
+				}}},
+			},
+			"as": "blurredMediaDetails",
+		}}},
+
+		// Lookup promptDetails for each prompts.prompt
+		{{Key: "$lookup", Value: bson.M{
+			"from": "prompts",
+			"let": bson.M{"promptIds": bson.M{
+				"$map": bson.M{
+					"input": "$prompts",
+					"as":    "p",
+					"in":    "$$p.prompt",
+				},
+			}},
+			"pipeline": mongo.Pipeline{
+				{{Key: "$match", Value: bson.M{
+					"$expr": bson.M{"$in": bson.A{"$_id", "$$promptIds"}},
+				}}},
+			},
+			"as": "promptDetails",
+		}}},
+
+		// Merge prompts with promptDetails, preserving other prompt fields like answer
+		{{Key: "$addFields", Value: bson.M{
+			"prompts": bson.M{
+				"$map": bson.M{
+					"input": "$prompts",
+					"as":    "p",
+					"in": bson.M{
+						"$mergeObjects": bson.A{
+							"$$p",
+							bson.M{
+								"prompt": bson.M{
+									"$arrayElemAt": bson.A{
+										bson.M{
+											"$filter": bson.M{
+												"input": "$promptDetails",
+												"as":    "pd",
+												"cond": bson.M{
+													"$eq": bson.A{"$$pd._id", "$$p.prompt"},
+												},
+											},
+										},
+										0,
+									},
+								},
+							},
+						},
+					},
 				},
 			},
-		},
-		"category": data.Category,
+		}}},
+
+		// Merge mediaDetails and blurredMediaDetails for each media item
+		{{Key: "$addFields", Value: bson.M{
+			"mediaDetails": bson.M{
+				"$map": bson.M{
+					"input": "$media",
+					"as":    "m",
+					"in": bson.M{
+						"media": bson.M{
+							"$arrayElemAt": bson.A{
+								bson.M{
+									"$filter": bson.M{
+										"input": "$mediaDetails",
+										"as":    "md",
+										"cond":  bson.M{"$eq": bson.A{"$$md._id", "$$m.mediaID"}},
+									},
+								},
+								0,
+							},
+						},
+						"blurredImage": bson.M{
+							"$arrayElemAt": bson.A{
+								bson.M{
+									"$filter": bson.M{
+										"input": "$blurredMediaDetails",
+										"as":    "bd",
+										"cond":  bson.M{"$eq": bson.A{"$$bd._id", "$$m.blurredImageID"}},
+									},
+								},
+								0,
+							},
+						},
+					},
+				},
+			},
+		}}},
+
+		// Final cleanup
+		{{Key: "$project", Value: bson.M{
+			"media":               0,
+			"blurredMediaDetails": 0,
+			"promptDetails":       0,
+		}}},
 	}
 
-	cursor, err := database.Mongo().Db().Collection("profiles").Find(ctx, filter, options.Find().SetLimit(int64(limit)))
+	cursor, err := models.Aggregate(ctx, database.Mongo().Db(), models.Profile{}, pipeline)
 	if err != nil {
-		log.Printf("Error fetching profiles: %v", err)
+		log.Printf("Error aggregating profiles: %v", err)
 		return nil, err
 	}
 	defer cursor.Close(ctx)
 
-	var profiles []models.Profile
-	if err := cursor.All(ctx, &profiles); err != nil {
-		log.Printf("Error decoding profiles: %v", err)
-		return nil, err
+	var results []bson.M
+	if err := cursor.All(ctx, &results); err != nil {
+		return nil, httpErrors.HydrateHttpError("purely/profiles/requests/errors/profile-not-found", 404, "Profile not found")
 	}
+	if len(results) == 0 {
+		return nil, httpErrors.HydrateHttpError("purely/profiles/requests/errors/profile-not-found", 404, "Profile not found")
+	}
+	var profiles []primitive.M
+
+	for _, profile := range results {
+		runes := []rune(profile["name"].(string))
+		firstNameChar := unicode.ToUpper(runes[0])
+		profile["name"] = fmt.Sprintf("%s...", string(firstNameChar))
+		profiles = append(profiles, profile)
+	}
+
 	return profiles, nil
 }
 

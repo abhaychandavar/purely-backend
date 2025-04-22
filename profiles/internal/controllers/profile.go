@@ -151,9 +151,9 @@ func (provider *ProfileController) UpsertDatingProfile(c *fiber.Ctx) error {
 					}
 					blurredMediaRefID := primitive.NewObjectID().Hex()
 					mediaList = append(mediaList, profileServiceTypes.MediaElementType{
-						MediaID:           *media.MediaID,
-						Order:             *media.Order,
-						BlurredMediaRefID: blurredMediaRefID,
+						MediaID:        *media.MediaID,
+						Order:          *media.Order,
+						BlurredImageID: blurredMediaRefID,
 					})
 				}
 			}

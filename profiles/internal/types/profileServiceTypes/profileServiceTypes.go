@@ -22,9 +22,9 @@ type GetProfileLayoutType struct {
 }
 
 type MediaElementType struct {
-	MediaID           string `json:"mediaID"`
-	Order             int    `json:"order"`
-	BlurredMediaRefID string `json:"blurredMediaRefID"`
+	MediaID        string `json:"mediaID"`
+	Order          int    `json:"order"`
+	BlurredImageID string `json:"blurredImageID"`
 }
 
 type DatingPromptType struct {
